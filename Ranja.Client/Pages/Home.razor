@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using Ranja.Client.Services
 @using Ranja.Client.Models
+@using Ranja.Client.Components
 @using Ranja.Solver
 @using System.Diagnostics
 @inject IJSRuntime JSRuntime
@@ -72,7 +73,6 @@
 
     private Solver.SolveResult solverResult;
     private int iterationCount;
-    private Timer? debounceTimer;
     private bool isComputing = false;
     private double lastComputedAngle = -1;
 
@@ -146,154 +146,173 @@
         if (isComputing) return;
 
         AngleX = newValue;
-
-        // Debounce the computation
-        debounceTimer?.Dispose();
-        debounceTimer = new Timer(async _ =>
-        {
-            await InvokeAsync(() =>
-            {
-                SolveTriangle();
-                StateHasChanged();
-                if (triangleRenderer != null)
-                    _ = triangleRenderer.UpdateVisualization();
-            });
-        }, null, TimeSpan.FromMilliseconds(300), Timeout.InfiniteTimeSpan);
-
-        await Task.CompletedTask;
+        await SolveTriangleAsync();
     }
 
     private void SolveTriangle()
+    {
+        _ = SolveTriangleAsync();
+    }
+
+    private async Task SolveTriangleAsync()
     {
         if (isComputing || Math.Abs(angleX - lastComputedAngle) < 0.01) return;
 
         isComputing = true;
         lastComputedAngle = angleX;
+        var currentAngle = angleX; // Capture the current angle value
 
         try
         {
-            var solver = new Ranja.Solver.Solver() { Rules = Problem1Rules.Rules };
+            // Run the heavy computation on a background thread
+            var (newAngleValues, newSegmentValues, newInconsistencies, newSolverResult, newIterationCount) = 
+                await Task.Run(() =>
+                {
+                    var solver = new Ranja.Solver.Solver() { Rules = Problem1Rules.Rules };
 
-            solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("DBA"), 20);
-            solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("CBD"), 60);
-            solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("ACD"), 30);
-            solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("DCB"), 50);
-            solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("FED"), angleX);
-            solver.AddGivenSegmentValue(Ranja.Solver.Segment.FromString("BC"), 1.0);
+                    solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("DBA"), 20);
+                    solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("CBD"), 60);
+                    solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("ACD"), 30);
+                    solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("DCB"), 50);
+                    solver.AddGivenAngleValue(Ranja.Solver.Angle.FromString("FED"), currentAngle);
+                    solver.AddGivenSegmentValue(Ranja.Solver.Segment.FromString("BC"), 1.0);
 
-            solverResult = solver.Solve();
-            iterationCount = 0;
+                    var result = solver.Solve();
+                    var iterations = 0;
 
-            for (int i = 0; i < Ranja.Solver.Constants.MAX_ITERATIONS; i++)
-            {
-                iterationCount = i;
-                if (solverResult != Ranja.Solver.Solver.SolveResult.MaxIterationsReached) break;
-            }
+                    for (int i = 0; i < Ranja.Solver.Constants.MAX_ITERATIONS; i++)
+                    {
+                        iterations = i;
+                        if (result != Ranja.Solver.Solver.SolveResult.MaxIterationsReached) break;
+                    }
 
+                    var angleValues = new Dictionary<Angle, ValueInfo>();
+                    var segmentValues = new Dictionary<Segment, ValueInfo>();
+                    var inconsistencyList = new List<string>();
+
+                    // Process angles - collect all values with their reasons
+                    foreach (var kvp in solver.AngleStorage.AngleValues)
+                    {
+                        var angle = kvp.Key;
+                        var values = kvp.Value;
+
+                        var distinctValues = solver.GetDistinctAngleValues(angle).ToList();
+                        var allValueDetails = new List<ValueDetail>();
+                        var hasInconsistencies = false;
+
+                        foreach (var value in values)
+                        {
+                            string reason = value switch
+                            {
+                                GivenAngleValue gav => $"Given: {gav.Value:F1}°",
+                                ComputedAngleValue cav => cav.Reason,
+                                InconsistencyAngleValue iav => $"Inconsistency: {iav.Description}",
+                                _ => "Unknown source"
+                            };
+
+                            double numericValue = value switch
+                            {
+                                GivenAngleValue gav => gav.Value,
+                                ComputedAngleValue cav => cav.Value,
+                                InconsistencyAngleValue => double.NaN,
+                                _ => double.NaN
+                            };
+
+                            if (!double.IsNaN(numericValue))
+                            {
+                                allValueDetails.Add(new ValueDetail(numericValue, reason));
+                            }
+                            else if (value is InconsistencyAngleValue)
+                            {
+                                // Include inconsistency details even though numeric value is NaN
+                                allValueDetails.Add(new ValueDetail(double.NaN, reason));
+                                hasInconsistencies = true;
+                            }
+                        }
+
+                        if (allValueDetails.Any())
+                        {
+                            var isInconsistent = distinctValues.Count > 1 || hasInconsistencies;
+                            angleValues[angle] = new ValueInfo(distinctValues, allValueDetails, isInconsistent);
+                        }
+                    }
+
+                    // Process segments - collect all values with their reasons
+                    foreach (var kvp in solver.SegmentStorage.SegmentValues)
+                    {
+                        var segment = kvp.Key;
+                        var values = kvp.Value;
+
+                        var distinctValues = solver.GetDistinctSegmentValues(segment).ToList();
+                        var allValueDetails = new List<ValueDetail>();
+                        var hasInconsistencies = false;
+
+                        foreach (var value in values)
+                        {
+                            string reason = value switch
+                            {
+                                GivenSegmentValue gsv => $"Given: {gsv.Value:F2}",
+                                ComputedSegmentValue csv => csv.Reason,
+                                InconsistencySegmentValue isv => $"Inconsistency: {isv.Description}",
+                                _ => "Unknown source"
+                            };
+
+                            double numericValue = value switch
+                            {
+                                GivenSegmentValue gsv => gsv.Value,
+                                ComputedSegmentValue csv => csv.Value,
+                                InconsistencySegmentValue => double.NaN,
+                                _ => double.NaN
+                            };
+
+                            if (!double.IsNaN(numericValue))
+                            {
+                                allValueDetails.Add(new ValueDetail(numericValue, reason));
+                            }
+                            else if (value is InconsistencySegmentValue)
+                            {
+                                // Include inconsistency details even though numeric value is NaN
+                                allValueDetails.Add(new ValueDetail(double.NaN, reason));
+                                hasInconsistencies = true;
+                            }
+                        }
+
+                        if (allValueDetails.Any())
+                        {
+                            var isInconsistent = distinctValues.Count > 1 || hasInconsistencies;
+                            segmentValues[segment] = new ValueInfo(distinctValues, allValueDetails, isInconsistent);
+                        }
+                    }
+
+                    inconsistencyList.AddRange(solver.Inconsistencies);
+
+                    return (angleValues, segmentValues, inconsistencyList, result, iterations);
+                });
+
+            // Update UI state efficiently - single state update
             currentAngleValues.Clear();
             currentSegmentValues.Clear();
             inconsistencies.Clear();
 
-            // Process angles - collect all values with their reasons
-            foreach (var kvp in solver.AngleStorage.AngleValues)
-            {
-                var angle = kvp.Key;
-                var values = kvp.Value;
+            foreach (var kvp in newAngleValues)
+                currentAngleValues[kvp.Key] = kvp.Value;
 
-                var distinctValues = solver.GetDistinctAngleValues(angle).ToList();
-                var allValueDetails = new List<ValueDetail>();
-                var hasInconsistencies = false;
+            foreach (var kvp in newSegmentValues)
+                currentSegmentValues[kvp.Key] = kvp.Value;
 
-                foreach (var value in values)
-                {
-                    string reason = value switch
-                    {
-                        GivenAngleValue gav => $"Given: {gav.Value:F1}°",
-                        ComputedAngleValue cav => cav.Reason,
-                        InconsistencyAngleValue iav => $"Inconsistency: {iav.Description}",
-                        _ => "Unknown source"
-                    };
+            inconsistencies.AddRange(newInconsistencies);
+            solverResult = newSolverResult;
+            iterationCount = newIterationCount;
 
-                    double numericValue = value switch
-                    {
-                        GivenAngleValue gav => gav.Value,
-                        ComputedAngleValue cav => cav.Value,
-                        InconsistencyAngleValue => double.NaN,
-                        _ => double.NaN
-                    };
-
-                    if (!double.IsNaN(numericValue))
-                    {
-                        allValueDetails.Add(new ValueDetail(numericValue, reason));
-                    }
-                    else if (value is InconsistencyAngleValue)
-                    {
-                        // Include inconsistency details even though numeric value is NaN
-                        allValueDetails.Add(new ValueDetail(double.NaN, reason));
-                        hasInconsistencies = true;
-                    }
-                }
-
-                if (allValueDetails.Any())
-                {
-                    var isInconsistent = distinctValues.Count > 1 || hasInconsistencies;
-                    currentAngleValues[angle] = new ValueInfo(distinctValues, allValueDetails, isInconsistent);
-                }
-            }
-
-            // Process segments - collect all values with their reasons
-            foreach (var kvp in solver.SegmentStorage.SegmentValues)
-            {
-                var segment = kvp.Key;
-                var values = kvp.Value;
-
-                var distinctValues = solver.GetDistinctSegmentValues(segment).ToList();
-                var allValueDetails = new List<ValueDetail>();
-                var hasInconsistencies = false;
-
-                foreach (var value in values)
-                {
-                    string reason = value switch
-                    {
-                        GivenSegmentValue gsv => $"Given: {gsv.Value:F2}",
-                        ComputedSegmentValue csv => csv.Reason,
-                        InconsistencySegmentValue isv => $"Inconsistency: {isv.Description}",
-                        _ => "Unknown source"
-                    };
-
-                    double numericValue = value switch
-                    {
-                        GivenSegmentValue gsv => gsv.Value,
-                        ComputedSegmentValue csv => csv.Value,
-                        InconsistencySegmentValue => double.NaN,
-                        _ => double.NaN
-                    };
-
-                    if (!double.IsNaN(numericValue))
-                    {
-                        allValueDetails.Add(new ValueDetail(numericValue, reason));
-                    }
-                    else if (value is InconsistencySegmentValue)
-                    {
-                        // Include inconsistency details even though numeric value is NaN
-                        allValueDetails.Add(new ValueDetail(double.NaN, reason));
-                        hasInconsistencies = true;
-                    }
-                }
-
-                if (allValueDetails.Any())
-                {
-                    var isInconsistent = distinctValues.Count > 1 || hasInconsistencies;
-                    currentSegmentValues[segment] = new ValueInfo(distinctValues, allValueDetails, isInconsistent);
-                }
-            }
-
-            inconsistencies.AddRange(solver.Inconsistencies);
+            StateHasChanged();
+            
+            // Update triangle renderer after state change
+            if (triangleRenderer != null)
+                _ = triangleRenderer.UpdateVisualization();
         }
         finally
         {
             isComputing = false;
-            StateHasChanged();
         }
     }
 
@@ -353,7 +372,7 @@
 
     public void Dispose()
     {
-        debounceTimer?.Dispose();
+        // No resources to dispose currently
     }
 
 }

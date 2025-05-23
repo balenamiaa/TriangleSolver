@@ -18,6 +18,24 @@
             {
                 <line x1="@p1.Value.X" y1="@p1.Value.Y" x2="@p2.Value.X" y2="@p2.Value.Y"
                       stroke="#4b5563" stroke-width="2" />
+
+                <!-- Segment value display -->
+                @if (SegmentValues.TryGetValue(line.Segment, out var segmentValueInfo))
+                {
+                    var midX = (p1.Value.X + p2.Value.X) / 2;
+                    var midY = (p1.Value.Y + p2.Value.Y) / 2;
+                    var displayText = segmentValueInfo.IsInconsistent ? "??" : segmentValueInfo.DisplayValue.ToString("F1");
+                    var textColor = segmentValueInfo.IsInconsistent ? "#dc2626" : "#1e3a8a";
+                    var segmentId = FormatSegmentId(line.Segment);
+                    
+                    <text>
+                        <text x="@midX" y="@(midY - 6)" font-size="10" fill="@textColor" text-anchor="middle" dominant-baseline="auto"
+                            style="cursor: pointer" @onclick="@(() => OnValueClickInternal(segmentId, midX, midY - 6))"
+                            @onclick:stopPropagation="true">
+                            @displayText
+                        </text>
+                    </text>
+                }
             }
         }
 
