@@ -1,0 +1,329 @@
+﻿@page "/"
+@using Ranja.Client.Services
+@using Ranja.Client.Models
+@using Ranja.Solver
+@using System.Diagnostics
+@inject IJSRuntime JSRuntime
+@inject IModalService ModalService
+@implements IDisposable
+
+<PageTitle>Triangle Solver - The Hardest Easy Problem</PageTitle>
+
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Triangle Solver</h1>
+            <p class="text-gray-600">The Hardest Easy Problem - Interactive Geometry</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <!-- Triangle Visualization -->
+            <div class="xl:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Triangle Visualization</h2>
+
+                    <!-- Angle X Slider -->
+                    <div class="mb-6">
+                        <AngleSlider @bind-Value="AngleX" Min="0" Max="120" Label="Angle x (∠FEB)"
+                            OnValueChanged="OnAngleChanged" />
+                    </div>
+
+                    <!-- Triangle Container -->
+                    <div class="relative bg-gray-50 rounded-xl p-8 min-h-[600px]" @onclick="() => CloseAllPopups()">
+                        <TriangleRenderer @ref="triangleRenderer" Configuration="triangleConfig" XValue="angleX"
+                            AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
+                            Inconsistencies="inconsistencies"
+                            OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.X, args.Y))" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Values Panel -->
+            <div class="space-y-6">
+                <!-- Computed Values -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Computed Values</h3>
+                    <ValuesDisplay AngleValues="displayAngleValues" SegmentValues="displaySegmentValues"
+                        Inconsistencies="inconsistencies"
+                        OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.X, args.Y))" />
+                </div>
+
+                <!-- Solver Status -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Solver Status</h3>
+                    <SolverStatus Result="solverResult" Inconsistencies="inconsistencies"
+                        IterationCount="iterationCount" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private TriangleRenderer? triangleRenderer = default!;
+
+    private double angleX = 30.0;
+    private TriangleConfiguration triangleConfig = default!;
+    private Dictionary<string, double> currentAngleValues = new();
+    private Dictionary<string, double> currentSegmentValues = new();
+    private Dictionary<string, double> displayAngleValues = new();
+    private Dictionary<string, double> displaySegmentValues = new();
+    private List<string> inconsistencies = [];
+
+    private Solver.SolveResult solverResult;
+    private int iterationCount;
+    private Timer? debounceTimer;
+    private bool isComputing = false;
+
+    public double AngleX
+    {
+        get => angleX;
+        set
+        {
+            if (Math.Abs(angleX - value) > 0.01)
+            {
+                angleX = value;
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        InitializeTriangleConfiguration();
+        SolveTriangle();
+    }
+
+    private void InitializeTriangleConfiguration()
+    {
+        triangleConfig = new TriangleConfiguration
+        {
+            LogicalCoords = new LogicalCoordinates(-80, 80, -48, 48),
+            SvgViewBox = new SvgViewBox(600, 400),
+
+            Points = new Dictionary<string, PointDefinition>
+            {
+                ["A"] = new(new Vector2D(71.8, 0), LabelPosition.VerticalAbove, "12"),
+                ["B"] = new(new Vector2D(-70, 25), LabelPosition.VerticalAbove, "12"),
+                ["C"] = new(new Vector2D(-70, -25), LabelPosition.VerticalBelow, "12"),
+                ["E"] = new(new Vector2D(-3.7, -13.3), LabelPosition.VerticalBelow, "12"),
+                ["F"] = new(new Vector2D(-20.8, 16.3), LabelPosition.VerticalAbove, "12")
+                // D will be calculated as intersection
+            },
+
+            Lines =
+        [
+        // Main triangle ABC
+        new("A", "B"), new("B", "C"), new("C", "A"),
+// Connecting lines
+new("B", "E"), new("C", "F"), new("E", "F"),
+// Lines to D
+new("B", "D"), new("C", "D"), new("E", "D"), new("F", "D"),
+// Additional segments
+new("B", "F"), new("C", "E"), new("A", "E"), new("A", "F")
+        ],
+
+            Angles =
+        [
+        new AngleDefinition("CBE", "C", "B", "E", "60°", 16, 1.5),
+new AngleDefinition("EBA", "E", "B", "A", "20°", 36, 1.5),
+new AngleDefinition("BCF", "B", "C", "F", "50°", 18, 1.6),
+new AngleDefinition("FCA", "F", "C", "A", "30°", 18, 1.6),
+new AngleDefinition("FEB", "F", "E", "B", "x", 24, 1.5, "#b91c1c", "bold"),
+// Additional angles from solver
+new AngleDefinition("CEB", "C", "E", "B", "", 24, 1.5),
+new AngleDefinition("AEF", "A", "E", "F", "", 24, 1.5),
+new AngleDefinition("BDC", "B", "D", "C", "", 12, 1.95),
+new AngleDefinition("FDE", "F", "D", "E", "", 12, 1.95),
+new AngleDefinition("BDF", "B", "D", "F", "", 12, 1.95),
+new AngleDefinition("CDE", "C", "D", "E", "", 12, 1.95),
+new AngleDefinition("BFD", "B", "F", "D", "", 16, 1.75),
+new AngleDefinition("AFE", "A", "F", "E", "", 16, 1.75),
+new AngleDefinition("DFE", "D", "F", "E", "", 16, 1.5)
+        ]
+        };
+    }
+
+    private async Task OnAngleChanged(double newValue)
+    {
+        if (isComputing) return;
+
+        AngleX = newValue;
+
+        debounceTimer?.Dispose();
+        debounceTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(() =>
+    {
+            SolveTriangle();
+            StateHasChanged();
+            if (triangleRenderer != null)
+                _ = triangleRenderer.UpdateVisualization();
+        });
+        }, null, TimeSpan.FromMilliseconds(300), Timeout.InfiniteTimeSpan);
+
+        await Task.CompletedTask;
+    }
+
+    private void SolveTriangle()
+    {
+        if (isComputing) return;
+        isComputing = true;
+
+        try
+        {
+            var solver = new Solver() { Rules = Ranja.Solver.Problem1Rules.Rules };
+            int actualIterations = 0;
+
+            solver.AddGivenAngleValue(Angle.FromString("CBA"), 80.0);
+            solver.AddGivenAngleValue(Angle.FromString("ACB"), 80.0);
+            solver.AddGivenAngleValue(Angle.FromString("CAB"), 20.0);
+
+            solver.AddGivenAngleValue(Angle.FromString("CBE"), 60.0);
+            solver.AddGivenAngleValue(Angle.FromString("EBA"), 20.0);
+            solver.AddGivenAngleValue(Angle.FromString("BCF"), 50.0);
+            solver.AddGivenAngleValue(Angle.FromString("FCA"), 30.0);
+
+            solver.AddGivenAngleValue(Angle.FromString("FED"), angleX);
+            solver.AddGivenSegmentValue(Segment.FromString("BC"), 1.0);
+
+            for (actualIterations = 0; actualIterations < Constants.MAX_ITERATIONS; actualIterations++)
+            {
+                bool newInformationDerived = false;
+                foreach (var rule in solver.Rules)
+                {
+                    try
+                    {
+                        if (rule.ApplyRule(solver))
+                            newInformationDerived = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error applying rule {rule.GetType().Name}: {ex.Message}");
+                    }
+                }
+
+                if (!newInformationDerived)
+                {
+                    solverResult = solver.Inconsistencies.Count != 0 ? Solver.SolveResult.InconsistentButComplete :
+                    Solver.SolveResult.ConsistentStable;
+                    break;
+                }
+            }
+
+            if (actualIterations >= Constants.MAX_ITERATIONS)
+            {
+                solverResult = Solver.SolveResult.MaxIterationsReached;
+            }
+
+            iterationCount = actualIterations;
+
+            currentAngleValues.Clear();
+            currentSegmentValues.Clear();
+            inconsistencies.Clear();
+
+            foreach (var kvp in solver.AngleStorage.AngleValues)
+            {
+                var angle = kvp.Key;
+                var value = solver.GetConsistentAngleValue(angle);
+                if (value.HasValue)
+                {
+                    var angleKey = $"{angle.P1.Content}{angle.Vertex.Content}{angle.P2.Content}";
+                    currentAngleValues[angleKey] = value.Value;
+                }
+            }
+
+            foreach (var kvp in solver.SegmentStorage.SegmentValues)
+            {
+                var segment = kvp.Key;
+                var value = solver.GetConsistentSegmentValue(segment);
+                if (value.HasValue)
+                {
+                    var segmentKey = string.Join("", new[] { segment.P1.Content, segment.P2.Content }.OrderBy(s => s));
+                    currentSegmentValues[segmentKey] = value.Value;
+                }
+            }
+
+            inconsistencies.AddRange(solver.Inconsistencies);
+
+            UpdateDisplayValues();
+        }
+        finally
+        {
+            isComputing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateDisplayValues()
+    {
+        var displayAngleIds = triangleConfig.Angles.Select(a => a.Id).ToHashSet();
+        var displaySegmentIds = triangleConfig.Lines
+            .Select(l => string.Join("", new[] { l.Point1, l.Point2 }.OrderBy(s => s)))
+            .ToHashSet();
+
+        displayAngleValues = new Dictionary<string, double>();
+        foreach (var angleEntry in currentAngleValues)
+        {
+            var angleKey = angleEntry.Key; 
+            var angleValue = angleEntry.Value;
+
+            if (displayAngleIds.Contains(angleKey))
+            {
+                displayAngleValues[angleKey] = angleValue;
+            }
+            else
+            {
+                var reverseAngleKey = $"{angleKey[2]}{angleKey[1]}{angleKey[0]}";
+                if (displayAngleIds.Contains(reverseAngleKey))
+                {
+                    displayAngleValues[reverseAngleKey] = angleValue;
+                }
+            }
+        }
+
+        displaySegmentValues = new Dictionary<string, double>();
+        foreach (var segmentEntry in currentSegmentValues)
+        {
+            var segmentKey = segmentEntry.Key;
+            var segmentValue = segmentEntry.Value;
+
+            if (displaySegmentIds.Contains(segmentKey))
+            {
+                displaySegmentValues[segmentKey] = segmentValue;
+            }
+        }
+    }
+
+    private async Task ShowValuePopup(string valueId, double x, double y)
+    {
+        var valueData = new ValuePopupData(
+        Id: valueId,
+        Value: currentAngleValues.GetValueOrDefault(valueId, currentSegmentValues.GetValueOrDefault(valueId, 0)),
+        Reason: "Computed using triangle properties",
+        IsInconsistent: inconsistencies.Any(i => i.Contains(valueId))
+        );
+
+        var options = new ModalOptions(
+        X: x,
+        Y: y,
+        CloseOnBackdropClick: true,
+        CloseOnEscape: true,
+        ZIndex: 1000
+        );
+
+        await ModalService.ShowModalAsync("value-popup", valueData, options);
+    }
+
+    private async Task CloseAllPopups()
+    {
+        await ModalService.HideAllModalsAsync();
+    }
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}

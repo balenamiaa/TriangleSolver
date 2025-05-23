@@ -1,0 +1,229 @@
+@using Ranja.Client.Models
+@inject IJSRuntime JSRuntime
+
+<div class="triangle-renderer w-full h-full relative" @ref="containerElement">
+    <svg viewBox="0 0 @Configuration.SvgViewBox.Width @Configuration.SvgViewBox.Height" class="w-full"
+        style="aspect-ratio: @(Configuration.SvgViewBox.Width / Configuration.SvgViewBox.Height); max-height: 600px;">
+
+        <!-- Background -->
+        <rect x="0" y="0" width="@Configuration.SvgViewBox.Width" height="@Configuration.SvgViewBox.Height"
+            fill="#f8fafc" rx="10" />
+
+        <!-- Main triangle background -->
+        @{
+            var aPoint = GetSvgPoint("A");
+            var bPoint = GetSvgPoint("B");
+            var cPoint = GetSvgPoint("C");
+        }
+        @if (aPoint != null && bPoint != null && cPoint != null)
+        {
+            <polygon
+                points="@($"{aPoint.Value.X:F2},{aPoint.Value.Y:F2} {bPoint.Value.X:F2},{bPoint.Value.Y:F2} {cPoint.Value.X:F2},{cPoint.Value.Y:F2}")"
+                stroke="#1e40af" stroke-width="2.5" fill="#dbeafe" fill-opacity="0.3" />
+        }
+
+        <!-- All lines -->
+        @foreach (var line in Configuration.Lines)
+        {
+            var p1 = GetSvgPoint(line.Point1);
+            var p2 = GetSvgPoint(line.Point2);
+
+            @if (p1 != null && p2 != null)
+            {
+                <line x1="@p1.Value.X" y1="@p1.Value.Y" x2="@p2.Value.X" y2="@p2.Value.Y" stroke="#3b82f6" stroke-width="2" />
+
+                var segmentKey = GetSegmentKey(line.Point1, line.Point2);
+                var segmentValue = GetSegmentValue(segmentKey);
+                @if (segmentValue.HasValue)
+                {
+                    var midX = (p1.Value.X + p2.Value.X) / 2;
+                    var midY = (p1.Value.Y + p2.Value.Y) / 2;
+                    <text>
+                        <text x="@midX" y="@(midY - 6)" font-size="10" fill="#1e3a8a" text-anchor="middle" dominant-baseline="auto"
+                            style="cursor: pointer" @onclick="@(() => OnValueClickInternal(segmentKey, midX, midY - 6))"
+                            @onclick:stopPropagation="true">
+                            @segmentValue.Value.ToString("F1")
+                        </text>
+                    </text>
+                }
+            }
+        }
+
+        <!-- Points -->
+        @foreach (var pointPair in Configuration.Points)
+        {
+            var pointName = pointPair.Key;
+            var svgPoint = GetSvgPoint(pointName);
+
+            @if (svgPoint != null)
+            {
+                <circle cx="@svgPoint.Value.X" cy="@svgPoint.Value.Y" r="4" fill="#1e40af" />
+
+                var labelPos = GetPointLabelPosition(svgPoint.Value, pointPair.Value);
+
+                <text>
+                    <text x="@labelPos.X" y="@labelPos.Y" font-size="18" font-weight="bold" fill="rgb(255,114,128)"
+                        text-anchor="middle" dominant-baseline="central">
+                        @pointName
+                    </text>
+                </text>
+            }
+        }
+
+        <!-- Angles -->
+        @foreach (var angle in Configuration.Angles)
+        {
+            var p1 = GetSvgPoint(angle.P1);
+            var vertex = GetSvgPoint(angle.Vertex);
+            var p2 = GetSvgPoint(angle.P2);
+
+            @if (p1 != null && vertex != null && p2 != null)
+            {
+                <!-- Angle arc -->
+                var arcPath = GeometryUtils.CalculateAngleArc(p1.Value, vertex.Value, p2.Value, angle.Radius);
+                <path d="@arcPath" fill="none" stroke="@angle.Color" stroke-width="1.2" />
+
+                <!-- Angle label -->
+                var labelPos = GeometryUtils.CalculateAngleLabelPosition(p1.Value, vertex.Value, p2.Value, angle.Radius,
+                angle.TextOffsetScale);
+                var displayValue = GetAngleDisplayValue(angle);
+
+                <text>
+                    <text x="@labelPos.X" y="@labelPos.Y" font-size="@(angle.Id == "FEB" ? "14" : "12")"
+                        font-style="@(angle.Id == "FEB" ? "italic" : "normal")" font-weight="@angle.FontWeight"
+                        fill="@angle.Color" text-anchor="middle" dominant-baseline="central" style="cursor: pointer"
+                        @onclick="@(() => OnValueClickInternal(angle.Id, labelPos.X, labelPos.Y))"
+                        @onclick:stopPropagation="true">
+                        @displayValue
+                    </text>
+                </text>
+            }
+        }
+    </svg>
+</div>
+
+@code {
+    [Parameter] public TriangleConfiguration Configuration { get; set; } = null!;
+    [Parameter] public double XValue { get; set; } = 30.0;
+    [Parameter] public Dictionary<string, double> AngleValues { get; set; } = new();
+    [Parameter] public Dictionary<string, double> SegmentValues { get; set; } = new();
+    [Parameter] public List<string> Inconsistencies { get; set; } = [];
+    [Parameter] public EventCallback<(string ValueId, double X, double Y)> OnValueClick { get; set; }
+
+    private ElementReference containerElement;
+    private Dictionary<string, Vector2D> _svgPoints = new();
+
+    protected override void OnParametersSet()
+    {
+        CalculateSvgPoints();
+    }
+
+    private void CalculateSvgPoints()
+    {
+        _svgPoints.Clear();
+
+        foreach (var pointPair in Configuration.Points)
+        {
+            var svgPoint = GeometryUtils.TransformPoint(
+            pointPair.Value.LogicalCoords,
+            Configuration.LogicalCoords,
+            Configuration.SvgViewBox);
+            _svgPoints[pointPair.Key] = svgPoint;
+        }
+
+        // Calculate point D as intersection of lines BE and CF
+        if (_svgPoints.ContainsKey("B") && _svgPoints.ContainsKey("E") &&
+        _svgPoints.ContainsKey("C") && _svgPoints.ContainsKey("F"))
+        {
+            // Need to work in logical coordinates for intersection, then transform
+            var bLogical = Configuration.Points["B"].LogicalCoords;
+            var eLogical = Configuration.Points["E"].LogicalCoords;
+            var cLogical = Configuration.Points["C"].LogicalCoords;
+            var fLogical = Configuration.Points["F"].LogicalCoords;
+
+            var line1 = new LineSegment(bLogical, eLogical);
+            var line2 = new LineSegment(cLogical, fLogical);
+
+            var intersection = GeometryUtils.LineIntersection(line1, line2);
+            if (intersection.HasValue)
+            {
+                var dSvg = GeometryUtils.TransformPoint(intersection.Value, Configuration.LogicalCoords, Configuration.SvgViewBox);
+                _svgPoints["D"] = dSvg;
+            }
+        }
+    }
+
+    private Vector2D? GetSvgPoint(string pointName)
+    {
+        return _svgPoints.TryGetValue(pointName, out var point) ? point : null;
+    }
+
+    private string GetSegmentKey(string point1, string point2)
+    {
+        var sorted = new[] { point1, point2 }.OrderBy(p => p).ToArray();
+        return string.Join("", sorted);
+    }
+
+    private double? GetSegmentValue(string segmentKey)
+    {
+        return SegmentValues.TryGetValue(segmentKey, out var value) ? value : null;
+    }
+
+    private string GetAngleDisplayValue(AngleDefinition angle)
+    {
+        if (angle.Id == "FEB") // This is our variable x
+        {
+            return $"{XValue:F1}°";
+        }
+
+        if (AngleValues.TryGetValue(angle.Id, out var solvedValue))
+        {
+            return $"{solvedValue:F0}°";
+        }
+
+        return angle.DisplayValue;
+    }
+
+    private Vector2D GetPointLabelPosition(Vector2D svgPoint, PointDefinition pointDef)
+    {
+        var offset = 12.0;
+
+        return pointDef.LabelPosition switch
+        {
+            LabelPosition.VerticalAbove => new Vector2D(svgPoint.X, svgPoint.Y - offset),
+            LabelPosition.VerticalBelow => new Vector2D(svgPoint.X, svgPoint.Y + offset),
+            LabelPosition.HorizontalRight => new Vector2D(svgPoint.X + offset, svgPoint.Y),
+            LabelPosition.HorizontalLeft => new Vector2D(svgPoint.X - offset, svgPoint.Y),
+            _ => new Vector2D(svgPoint.X, svgPoint.Y - offset)
+        };
+    }
+
+    private async Task OnValueClickInternal(string valueId, double svgX, double svgY)
+    {
+        // Convert SVG coordinates to screen coordinates
+        var bounds = await JSRuntime.InvokeAsync<BoundingClientRect>("getBoundingClientRect", containerElement);
+
+        // Calculate the scale factor of the SVG
+        var scaleX = bounds.Width / Configuration.SvgViewBox.Width;
+        var scaleY = bounds.Height / Configuration.SvgViewBox.Height;
+
+        // Convert SVG coordinates to relative position within the SVG element
+        var relativeX = svgX * scaleX;
+        var relativeY = svgY * scaleY;
+
+        // Convert to screen coordinates
+        var screenX = bounds.Left + relativeX;
+        var screenY = bounds.Top + relativeY;
+
+        await OnValueClick.InvokeAsync((valueId, screenX, screenY));
+    }
+
+    public async Task UpdateVisualization()
+    {
+        CalculateSvgPoints();
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    public record BoundingClientRect(double Left, double Top, double Width, double Height);
+}

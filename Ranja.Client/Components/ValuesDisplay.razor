@@ -1,0 +1,115 @@
+<div class="values-display space-y-4">
+    <!-- Angles Section -->
+    @if (AngleValues.Any())
+    {
+        <div class="angles-section">
+            <h4 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Angles
+            </h4>
+            <div class="space-y-2">
+                @foreach (var angle in AngleValues.OrderBy(a => a.Key))
+                {
+                    var isInconsistent = IsValueInconsistent(angle.Key);
+                    <div class="value-item flex items-center justify-between p-3 rounded-lg border @(isInconsistent ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50") hover:shadow-md transition-all duration-200 cursor-pointer"
+                         @onclick="@(() => OnValueClickInternal(angle.Key))">
+                        <div class="flex items-center space-x-3">
+                            <div class="angle-icon w-8 h-8 rounded-full @(isInconsistent ? "bg-red-100" : "bg-blue-100") flex items-center justify-center">
+                                <span class="text-xs font-medium @(isInconsistent ? "text-red-600" : "text-blue-600")">∠</span>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">∠@FormatAngleName(angle.Key)</div>
+                                @if (isInconsistent)
+                                {
+                                    <div class="text-xs text-red-600">Inconsistent value</div>
+                                }
+                            </div>
+                        </div>
+                        <div class="value @(isInconsistent ? "text-red-600" : "text-gray-700") font-mono text-sm">
+                            @angle.Value.ToString("F1")°
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Segments Section -->
+    @if (SegmentValues.Any())
+    {
+        <div class="segments-section">
+            <h4 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                <svg class="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+                Segments
+            </h4>
+            <div class="space-y-2">
+                @foreach (var segment in SegmentValues.OrderBy(s => s.Key))
+                {
+                    var isInconsistent = IsValueInconsistent(segment.Key);
+                    <div class="value-item flex items-center justify-between p-3 rounded-lg border @(isInconsistent ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50") hover:shadow-md transition-all duration-200 cursor-pointer"
+                         @onclick="@(() => OnValueClickInternal(segment.Key))">
+                        <div class="flex items-center space-x-3">
+                            <div class="segment-icon w-8 h-8 rounded-full @(isInconsistent ? "bg-red-100" : "bg-green-100") flex items-center justify-center">
+                                <span class="text-xs font-medium @(isInconsistent ? "text-red-600" : "text-green-600")">—</span>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">@segment.Key</div>
+                                @if (isInconsistent)
+                                {
+                                    <div class="text-xs text-red-600">Inconsistent value</div>
+                                }
+                            </div>
+                        </div>
+                        <div class="value @(isInconsistent ? "text-red-600" : "text-gray-700") font-mono text-sm">
+                            @segment.Value.ToString("F2")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Empty State -->
+    @if (!AngleValues.Any() && !SegmentValues.Any())
+    {
+        <div class="empty-state text-center py-8">
+            <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Values Computed</h3>
+            <p class="text-gray-600">Adjust the angle slider to compute triangle values</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Dictionary<string, double> AngleValues { get; set; } = new();
+    [Parameter] public Dictionary<string, double> SegmentValues { get; set; } = new();
+    [Parameter] public List<string> Inconsistencies { get; set; } = [];
+    [Parameter] public EventCallback<(string ValueId, double X, double Y)> OnValueClick { get; set; }
+
+    private bool IsValueInconsistent(string valueId)
+    {
+        return Inconsistencies.Any(i => i.Contains(valueId));
+    }
+
+    private string FormatAngleName(string angleName)
+    {
+        // Format angle names for better display (e.g., "ABC" -> "ABC")
+        // You could add more sophisticated formatting here
+        return angleName;
+    }
+
+    private async Task OnValueClickInternal(string valueId)
+    {
+        // For the values panel, we'll use a fixed position
+        // In a real implementation, you might want to calculate the actual position
+        await OnValueClick.InvokeAsync((valueId, 400, 300));
+    }
+} 
