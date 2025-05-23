@@ -1,4 +1,7 @@
-<div class="values-display space-y-4">
+@inject IJSRuntime JSRuntime
+@using Ranja.Client.Models
+
+<div class="values-display space-y-4" @ref="containerElement">
     @if (AngleValues.Any())
     {
         <div class="angles-section">
@@ -16,15 +19,27 @@
                     var valueInfo = angle.Value;
                     var isInconsistent = valueInfo.IsInconsistent;
                     var angleId = FormatAngleName(angle.Key);
-                    <div
+                    <div id="angle-@angleId"
                         class="value-item flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md"
                         style="@(isInconsistent ? $"border-color: var(--error-border); background-color: var(--error-bg);" : $"border-color: var(--border-primary); background-color: var(--bg-tertiary);") box-shadow: var(--shadow-sm);"
-                        @onclick="@(() => OnValueClickInternal(angleId))">
+                        @onclick="@(() => OnValueClickInternal(angleId, $"angle-{angleId}"))">
                         <div class="flex items-center space-x-3">
                             <div class="angle-icon w-8 h-8 rounded-full flex items-center justify-center"
                                  style="@(isInconsistent ? $"background-color: var(--error-bg); border: 1px solid var(--error-border);" : $"background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); box-shadow: var(--neon-glow);")">
-                                <span class="text-xs font-medium"
-                                      style="color: @(isInconsistent ? "var(--error-text)" : "white");">∠</span>
+                                @if (isInconsistent)
+                                {
+                                    <!-- Error icon -->
+                                    <svg class="w-5 h-5" style="color: var(--error-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <!-- Energy bolt icon -->
+                                    <svg class="w-5 h-5" style="color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                }
                             </div>
                             <div>
                                 <div class="font-medium" style="color: var(--text-primary);">∠@angleId</div>
@@ -75,15 +90,27 @@
                     var valueInfo = segment.Value;
                     var isInconsistent = valueInfo.IsInconsistent;
                     var segmentId = FormatSegmentName(segment.Key);
-                    <div
+                    <div id="segment-@segmentId"
                         class="value-item flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md"
                         style="@(isInconsistent ? $"border-color: var(--error-border); background-color: var(--error-bg);" : $"border-color: var(--border-primary); background-color: var(--bg-tertiary);") box-shadow: var(--shadow-sm);"
-                        @onclick="@(() => OnValueClickInternal(segmentId))">
+                        @onclick="@(() => OnValueClickInternal(segmentId, $"segment-{segmentId}"))">
                         <div class="flex items-center space-x-3">
                             <div class="segment-icon w-8 h-8 rounded-full flex items-center justify-center"
                                  style="@(isInconsistent ? $"background-color: var(--error-bg); border: 1px solid var(--error-border);" : $"background-color: var(--segment-color); box-shadow: 0 0 20px var(--segment-color);")">
-                                <span class="text-xs font-medium"
-                                      style="color: @(isInconsistent ? "var(--error-text)" : "white");">—</span>
+                                @if (isInconsistent)
+                                {
+                                    <!-- Error icon -->
+                                    <svg class="w-5 h-5" style="color: var(--error-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <!-- Right arrow chevron icon -->
+                                    <svg class="w-5 h-5" style="color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                    </svg>
+                                }
                             </div>
                             <div>
                                 <div class="font-medium" style="color: var(--text-primary);">@segmentId</div>
@@ -139,6 +166,8 @@
     [Parameter] public Dictionary<Segment, ValueInfo> SegmentValues { get; set; } = new();
     [Parameter] public EventCallback<(string ValueId, double X, double Y)> OnValueClick { get; set; }
 
+    private ElementReference containerElement;
+
     private string FormatAngleName(Angle angle) => $"{angle.P1.Content}{angle.Vertex.Content}{angle.P2.Content}";
 
     private string FormatSegmentName(Segment segment)
@@ -148,5 +177,22 @@
         return string.CompareOrdinal(p1, p2) < 0 ? $"{p1}{p2}" : $"{p2}{p1}";
     }
 
-    private async Task OnValueClickInternal(string valueId) => await OnValueClick.InvokeAsync((valueId, 400, 300));
+    private async Task OnValueClickInternal(string valueId, string elementId)
+    {
+        try
+        {
+            // Get the bounding rectangle of the clicked element
+            var bounds = await JSRuntime.InvokeAsync<BoundingClientRect>("getBoundingClientRectById", elementId);
+            // Position the modal at the center of the clicked element
+            var screenX = bounds.Left + (bounds.Width / 2); // Center horizontally
+            var screenY = bounds.Top + (bounds.Height / 2); // Center vertically
+            await OnValueClick.InvokeAsync((valueId, screenX, screenY));
+        }
+        catch
+        {
+            // Fallback to default position if JS call fails
+            await OnValueClick.InvokeAsync((valueId, 400, 300));
+        }
+    }
+
 } 

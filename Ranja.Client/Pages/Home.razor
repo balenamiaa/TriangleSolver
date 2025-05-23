@@ -24,8 +24,10 @@
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <!-- Triangle Visualization -->
             <div class="xl:col-span-2">
-                <div class="rounded-2xl p-4" style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
-                    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-primary);">Triangle Visualization</h2>
+                <div class="rounded-2xl p-4"
+                    style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-primary);">Triangle Visualization
+                    </h2>
 
                     <!-- Angle X Slider -->
                     <div class="mb-4">
@@ -34,7 +36,9 @@
                     </div>
 
                     <!-- Triangle Container -->
-                    <div class="relative rounded-xl p-2 min-h-[600px]" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-secondary);" @onclick="() => CloseAllPopups()">
+                    <div class="relative rounded-xl p-2 min-h-[600px]"
+                        style="background-color: var(--bg-tertiary); border: 1px solid var(--border-secondary);"
+                        @onclick="() => CloseAllPopups()">
                         <TriangleRenderer @ref="triangleRenderer" Configuration="triangleConfig" XValue="angleX"
                             AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
                             OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.X, args.Y))" />
@@ -45,14 +49,16 @@
             <!-- Values Panel -->
             <div class="space-y-6">
                 <!-- Computed Values -->
-                <div class="rounded-2xl p-6" style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                <div class="rounded-2xl p-6"
+                    style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
                     <h3 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Computed Values</h3>
                     <ValuesDisplay AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
                         OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.X, args.Y))" />
                 </div>
 
                 <!-- Solver Status -->
-                <div class="rounded-2xl p-6" style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                <div class="rounded-2xl p-6"
+                    style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
                     <h3 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Solver Status</h3>
                     <SolverStatus Result="solverResult" Inconsistencies="inconsistencies"
                         IterationCount="iterationCount" />

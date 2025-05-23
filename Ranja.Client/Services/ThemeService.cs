@@ -5,7 +5,7 @@ namespace Ranja.Client.Services;
 public class ThemeService : IThemeService
 {
     private readonly IJSRuntime _jsRuntime;
-    private string _currentTheme = "light";
+    private string _currentTheme = "dark";
 
     public ThemeService(IJSRuntime jsRuntime)
     {
@@ -21,13 +21,13 @@ public class ThemeService : IThemeService
         try
         {
             var savedTheme = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "theme");
-            _currentTheme = savedTheme ?? "light";
+            _currentTheme = savedTheme ?? "dark";
             await ApplyThemeAsync(_currentTheme);
         }
         catch
         {
-            // Fallback to light theme if localStorage is not available
-            _currentTheme = "light";
+            // Fallback to dark theme if localStorage is not available
+            _currentTheme = "dark";
             await ApplyThemeAsync(_currentTheme);
         }
     }
@@ -53,13 +53,13 @@ public class ThemeService : IThemeService
     {
         try
         {
-            if (theme == "dark")
+            if (theme == "light")
             {
-                await _jsRuntime.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-theme', 'dark')");
+                await _jsRuntime.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-theme', 'light')");
             }
             else
             {
-                await _jsRuntime.InvokeVoidAsync("eval", "document.documentElement.removeAttribute('data-theme')");
+                await _jsRuntime.InvokeVoidAsync("eval", "document.documentElement.setAttribute('data-theme', 'dark')");
             }
         }
         catch
