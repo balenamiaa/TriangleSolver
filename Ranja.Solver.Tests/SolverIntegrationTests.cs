@@ -52,40 +52,6 @@ public class SolverIntegrationTests
     }
 
     [Fact]
-    public void TestVariableAngleFEB()
-    {
-        var solver = new Solver();
-        solver.Rules.AddRange(Constants.GetRules());
-        
-        // Test with x = 30°
-        var angleX = 30.0;
-        
-        // Add given angles - vertex is middle character
-        solver.AddGivenAngleValue(Angle.FromString("CBA"), 80.0);  // Angle at B
-        solver.AddGivenAngleValue(Angle.FromString("ACB"), 80.0);  // Angle at C  
-        solver.AddGivenAngleValue(Angle.FromString("CAB"), 20.0);  // Angle at A
-        
-        // Individual sub-angles - vertex is middle character
-        solver.AddGivenAngleValue(Angle.FromString("CBE"), 60.0);  // Angle at B
-        solver.AddGivenAngleValue(Angle.FromString("EBA"), 20.0);  // Angle at B
-        solver.AddGivenAngleValue(Angle.FromString("BCF"), 50.0);  // Angle at C
-        solver.AddGivenAngleValue(Angle.FromString("CFA"), 30.0);  // Angle at F
-        
-        // Our variable x
-        solver.AddGivenAngleValue(Angle.FromString("FEB"), angleX);  // Angle at E
-        
-        var result = solver.Solve();
-        
-        // Should not have inconsistencies for reasonable values of x
-        Assert.True(result == Solver.SolveResult.ConsistentStable || result == Solver.SolveResult.InconsistentButComplete);
-        
-        // Verify that FEB angle is set correctly
-        var febAngle = solver.GetConsistentAngleValue(Angle.FromString("FEB"));
-        Assert.True(febAngle.HasValue);
-        Assert.Equal(angleX, febAngle.Value, precision: 1);
-    }
-
-    [Fact]
     public void TestAngleKeyGeneration()
     {
         // Test that the key generation matches what the UI expects

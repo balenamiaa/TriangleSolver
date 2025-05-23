@@ -4,7 +4,7 @@
 <div class="popup-container pointer-events-none" 
      style="position: fixed; left: @(GetX())px; top: @(GetY())px; transform: translate(-50%, calc(-100% - 10px)); pointer-events: none;">
     
-    <div class="popup-content bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-xs pointer-events-auto">
+    <div class="popup-content bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-md pointer-events-auto">
         <!-- Header -->
         <div class="popup-header flex items-center justify-between mb-3">
             <h3 class="text-sm font-semibold text-gray-900">Value Details</h3>
@@ -20,46 +20,82 @@
         @if (ValueData != null)
         {
             <div class="value-info space-y-3">
-                <!-- Main Value -->
-                <div class="main-value text-center p-3 @(ValueData.IsInconsistent ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200") rounded-lg">
-                    <div class="value-name text-xs font-medium text-gray-600 mb-1">
+                <!-- Value Name and Type -->
+                <div class="value-header text-center p-3 @(ValueData.IsInconsistent ? "bg-red-50 border border-red-200" : "bg-blue-50 border border-blue-200") rounded-lg">
+                    <div class="value-name text-sm font-medium text-gray-600 mb-1">
                         @FormatValueName(ValueData.Id)
                     </div>
-                    <div class="value-amount text-lg font-bold @(ValueData.IsInconsistent ? "text-red-600" : "text-blue-600")">
-                        @if (IsAngle(ValueData.Id))
-                        {
-                            @($"{ValueData.Value:F1}°")
-                        }
-                        else
-                        {
-                            @($"{ValueData.Value:F2}")
-                        }
-                    </div>
+                    
                     @if (ValueData.IsInconsistent)
                     {
-                        <div class="inconsistent-badge inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="inconsistent-badge inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            Inconsistent
+                            Multiple Conflicting Values
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="main-value text-lg font-bold @(ValueData.IsInconsistent ? "text-red-600" : "text-blue-600")">
+                            @if (ValueData.IsAngle)
+                            {
+                                @($"{ValueData.Values.First():F1}°")
+                            }
+                            else
+                            {
+                                @($"{ValueData.Values.First():F2}")
+                            }
                         </div>
                     }
                 </div>
 
-                <!-- Computation Details -->
-                <div class="computation-details">
-                    <h4 class="text-xs font-semibold text-gray-800 mb-1">Computation:</h4>
-                    <div class="computation-reason p-2 bg-gray-50 rounded border">
-                        <div class="text-xs text-gray-700">
-                            @ValueData.Reason
-                        </div>
+                <!-- All Values and Computations -->
+                <div class="all-values">
+                    <h4 class="text-xs font-semibold text-gray-800 mb-2">
+                        @if (ValueData.IsInconsistent)
+                        {
+                            <span>Conflicting Values (@ValueData.AllValueDetails.Count):</span>
+                        }
+                        else if (ValueData.AllValueDetails.Count > 1)
+                        {
+                            <span>Multiple Confirmations (@ValueData.AllValueDetails.Count):</span>
+                        }
+                        else
+                        {
+                            <span>Computation:</span>
+                        }
+                    </h4>
+                    
+                    <div class="values-list space-y-2 max-h-48 overflow-y-auto">
+                        @foreach (var (valueDetail, index) in ValueData.AllValueDetails.Select((v, i) => (v, i)))
+                        {
+                            var isDistinct = ValueData.IsInconsistent && 
+                                ValueData.AllValueDetails.Take(index).All(vd => Math.Abs(vd.Value - valueDetail.Value) > 0.001);
+                            
+                            <div class="value-detail p-2 @(isDistinct ? "bg-red-50 border border-red-200" : "bg-gray-50 border border-gray-200") rounded">
+                                                               <div class="flex items-center justify-between mb-1">                                    <div class="value-number text-sm font-medium @(isDistinct ? "text-red-600" : "text-gray-900")">                                        @if (double.IsNaN(valueDetail.Value))                                        {                                            <span class="text-red-600 font-bold">INCONSISTENCY</span>                                        }                                        else if (ValueData.IsAngle)                                        {                                            @($"{valueDetail.Value:F1}°")                                        }                                        else                                        {                                            @($"{valueDetail.Value:F2}")                                        }                                    </div>
+                                    @if (isDistinct)
+                                    {
+                                        <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Conflict</span>
+                                    }
+                                    else if (index > 0)
+                                    {
+                                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Confirms</span>
+                                    }
+                                </div>
+                                <div class="computation-reason text-xs text-gray-700">
+                                    @valueDetail.Reason
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
 
                 <!-- Value Type Info -->
                 <div class="value-type-info">
                     <div class="flex items-center justify-center">
-                        @if (IsAngle(ValueData.Id))
+                        @if (ValueData.IsAngle)
                         {
                             <div class="type-badge inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 <span class="mr-1">∠</span>
@@ -75,6 +111,15 @@
                         }
                     </div>
                 </div>
+
+                @if (ValueData.IsInconsistent)
+                {
+                    <div class="inconsistency-note p-2 bg-yellow-50 border border-yellow-200 rounded">
+                        <div class="text-xs text-yellow-800">
+                            <strong>Note:</strong> This value has multiple conflicting derivations. This suggests an inconsistency in the geometric constraints or input values.
+                        </div>
+                    </div>
+                }
             </div>
         }
     </div>

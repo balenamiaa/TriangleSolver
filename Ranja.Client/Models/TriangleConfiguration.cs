@@ -1,3 +1,5 @@
+using Ranja.Solver;
+
 namespace Ranja.Client.Models;
 
 public enum LabelPosition
@@ -28,13 +30,10 @@ public record struct LineSegment(Vector2D P1, Vector2D P2);
 
 public record PointDefinition(Vector2D LogicalCoords, LabelPosition LabelPosition, string LabelOffset);
 
-public record LineDefinition(string Point1, string Point2);
+public record LineDefinition(Segment Segment);
 
 public record AngleDefinition(
-    string Id,
-    string P1,
-    string Vertex, 
-    string P2,
+    Angle Angle,
     string DisplayValue,
     double Radius,
     double TextOffsetScale = 1.5,

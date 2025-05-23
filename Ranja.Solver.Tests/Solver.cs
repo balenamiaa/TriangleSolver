@@ -416,4 +416,48 @@ public class SolverTests
         Assert.Equal(Solver.SolveResult.InconsistentButComplete, result);
         Assert.NotEmpty(solver.Inconsistencies);
     }
+
+    [Fact]
+    public void TestGeometryProblemX35()
+    {
+        var solver = new Solver
+        {
+            Rules = TestRules
+        };
+
+        solver.AddGivenAngleValue(Angle.FromString("DBA"), 20);
+        solver.AddGivenAngleValue(Angle.FromString("CBD"), 60);
+        solver.AddGivenAngleValue(Angle.FromString("ACD"), 30);
+        solver.AddGivenAngleValue(Angle.FromString("DCB"), 50);
+        solver.AddGivenAngleValue(Angle.FromString("FED"), 35);
+        solver.AddGivenSegmentValue(Segment.FromString("BC"), 1.0);
+
+        var result = solver.Solve();
+
+        Assert.Equal(Solver.SolveResult.InconsistentButComplete, result);
+        Assert.NotEmpty(solver.Inconsistencies);
+        Assert.Contains(solver.Inconsistencies, inc => inc.Contains("Sine Rule violation"));
+    }
+
+    [Fact]
+    public void TestGeometryProblemX36()
+    {
+        var solver = new Solver
+        {
+            Rules = TestRules
+        };
+
+        solver.AddGivenAngleValue(Angle.FromString("DBA"), 20);
+        solver.AddGivenAngleValue(Angle.FromString("CBD"), 60);
+        solver.AddGivenAngleValue(Angle.FromString("ACD"), 30);
+        solver.AddGivenAngleValue(Angle.FromString("DCB"), 50);
+        solver.AddGivenAngleValue(Angle.FromString("FED"), 36);
+        solver.AddGivenSegmentValue(Segment.FromString("BC"), 1.0);
+
+        var result = solver.Solve();
+
+        Assert.Equal(Solver.SolveResult.InconsistentButComplete, result);
+        Assert.NotEmpty(solver.Inconsistencies);
+        Assert.Contains(solver.Inconsistencies, inc => inc.Contains("Sine Rule violation"));
+    }
 }

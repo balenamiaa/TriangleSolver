@@ -18,7 +18,6 @@ public static class Problem1Rules
         new IsATriangleRule(Triangle.FromString("DCE")),
         new IsATriangleRule(Triangle.FromString("CDE")),
         new IsATriangleRule(Triangle.FromString("BDF")),
-        new IsATriangleRule(Triangle.FromString("FDE")),
 
         new AngleEqualityRule(Angle.FromString("FAE"), Angle.FromString("BAC")),
         new AngleEqualityRule(Angle.FromString("ABD"), Angle.FromString("FBD")),
@@ -27,11 +26,12 @@ public static class Problem1Rules
         new AngleEqualityRule(Angle.FromString("BCD"), Angle.FromString("BCF")),
         new AngleEqualityRule(Angle.FromString("FDB"), Angle.FromString("EDC")),
         new AngleEqualityRule(Angle.FromString("FDE"), Angle.FromString("BDC")),
+        new AngleEqualityRule(Angle.FromString("CEB"), Angle.FromString("CED")),
 
         new AnglesAddUpToRule([Angle.FromString("BDC"), Angle.FromString("CDE")], 180),
         new AnglesAddUpToRule([Angle.FromString("CDB"), Angle.FromString("BDF")], 180),
-        new AnglesAddUpToRule([Angle.FromString("AFC"), Angle.FromString("CFB")], 180),
-        new AnglesAddUpToRule([Angle.FromString("AEB"), Angle.FromString("BEC")], 180),
+        new AnglesAddUpToRule([Angle.FromString("AFE"), Angle.FromString("EFC"), Angle.FromString("BFC")], 180),
+        new AnglesAddUpToRule([Angle.FromString("AEF"), Angle.FromString("FEB"), Angle.FromString("BEC")], 180),
 
         new AngleContainsSubAnglesRule(Angle.FromString("CBA"), [Angle.FromString("CBD"), Angle.FromString("DBA")]),
         new AngleContainsSubAnglesRule(Angle.FromString("BCA"), [Angle.FromString("BCD"), Angle.FromString("DCA")]),
