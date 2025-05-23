@@ -2,7 +2,6 @@
 @using Ranja.Solver
 
 <div class="values-display space-y-4">
-    <!-- Angles Section -->
     @if (AngleValues.Any())
     {
         <div class="angles-section">
@@ -52,7 +51,6 @@
         </div>
     }
 
-    <!-- Segments Section -->
     @if (SegmentValues.Any())
     {
         <div class="segments-section">
@@ -102,7 +100,6 @@
         </div>
     }
 
-    <!-- Empty State -->
     @if (!AngleValues.Any() && !SegmentValues.Any())
     {
         <div class="empty-state text-center py-8">
@@ -122,24 +119,14 @@
     [Parameter] public Dictionary<Segment, ValueInfo> SegmentValues { get; set; } = new();
     [Parameter] public EventCallback<(string ValueId, double X, double Y)> OnValueClick { get; set; }
 
-    private string FormatAngleName(Angle angle)
-    {
-        // Format angle names for display using the Angle struct
-        return $"{angle.P1.Content}{angle.Vertex.Content}{angle.P2.Content}";
-    }
+    private string FormatAngleName(Angle angle) => $"{angle.P1.Content}{angle.Vertex.Content}{angle.P2.Content}";
 
     private string FormatSegmentName(Segment segment)
     {
-        // Format segment names for display using canonical ordering
         var p1 = segment.P1.Content;
         var p2 = segment.P2.Content;
         return string.Compare(p1, p2) < 0 ? $"{p1}{p2}" : $"{p2}{p1}";
     }
 
-    private async Task OnValueClickInternal(string valueId)
-    {
-        // For the values panel, we'll use a fixed position
-        // In a real implementation, you might want to calculate the actual position
-        await OnValueClick.InvokeAsync((valueId, 400, 300));
-    }
+    private async Task OnValueClickInternal(string valueId) => await OnValueClick.InvokeAsync((valueId, 400, 300));
 } 
