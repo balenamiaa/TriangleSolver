@@ -38,8 +38,9 @@
                 {
                     var midX = (p1.Value.X + p2.Value.X) / 2;
                     var midY = (p1.Value.Y + p2.Value.Y) / 2;
+                    var isSegmentInconsistent = Inconsistencies.Any(i => i.Contains(segmentKey) || i.Contains($"Segment({segmentKey})"));
                     <text>
-                        <text x="@midX" y="@(midY - 6)" font-size="10" fill="#1e3a8a" text-anchor="middle" dominant-baseline="auto"
+                        <text x="@midX" y="@(midY - 6)" font-size="10" fill="@(isSegmentInconsistent ? "#ef4444" : "#1e3a8a")" text-anchor="middle" dominant-baseline="auto"
                             style="cursor: pointer" @onclick="@(() => OnValueClickInternal(segmentKey, midX, midY - 6))"
                             @onclick:stopPropagation="true">
                             @segmentValue.Value.ToString("F1")
@@ -87,11 +88,12 @@
                 var labelPos = GeometryUtils.CalculateAngleLabelPosition(p1.Value, vertex.Value, p2.Value, angle.Radius,
                 angle.TextOffsetScale);
                 var displayValue = GetAngleDisplayValue(angle);
+                var isAngleInconsistent = Inconsistencies.Any(i => i.Contains(angle.Id) || i.Contains($"∠{angle.Id}"));
 
                 <text>
                     <text x="@labelPos.X" y="@labelPos.Y" font-size="@(angle.Id == "FEB" ? "14" : "12")"
                         font-style="@(angle.Id == "FEB" ? "italic" : "normal")" font-weight="@angle.FontWeight"
-                        fill="@angle.Color" text-anchor="middle" dominant-baseline="central" style="cursor: pointer"
+                        fill="@(isAngleInconsistent ? "#ef4444" : angle.Color)" text-anchor="middle" dominant-baseline="central" style="cursor: pointer"
                         @onclick="@(() => OnValueClickInternal(angle.Id, labelPos.X, labelPos.Y))"
                         @onclick:stopPropagation="true">
                         @displayValue
