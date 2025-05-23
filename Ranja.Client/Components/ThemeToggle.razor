@@ -1,0 +1,82 @@
+@using Ranja.Client.Services
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<button @onclick="ToggleTheme"
+        class="theme-toggle relative w-14 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2"
+        style="background-color: var(--bg-accent); border: 1px solid var(--border-primary); box-shadow: var(--shadow-md);">
+
+    <div
+        class="toggle-circle absolute top-1 left-1 w-6 h-6 rounded-full transition-all duration-300 ease-in-out transform"
+        style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); box-shadow: var(--neon-glow); @(ThemeService.CurrentTheme == "dark" ? "transform: translateX(24px);" : "")">
+
+        <!-- Icon -->
+        <div class="w-full h-full flex items-center justify-center">
+            @if (ThemeService.CurrentTheme == "light")
+            {
+                <!-- Sun Icon -->
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2m16 0h2M6.34 6.34L4.93 4.93M19.07 19.07l-1.41-1.41M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+                </svg>
+            }
+            else
+            {
+                <!-- Moon Icon -->
+                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+            }
+        </div>
+    </div>
+
+    <!-- Background Track -->
+    <div class="absolute inset-0 rounded-full overflow-hidden">
+        <div class="w-full h-full flex">
+            <!-- Light Side -->
+            <div class="flex-1 flex items-center justify-start pl-2">
+                <div class="text-xs" style="color: var(--text-muted);">☀️</div>
+            </div>
+            <!-- Dark Side -->
+            <div class="flex-1 flex items-center justify-end pr-2">
+                <div class="text-xs" style="color: var(--text-muted);">🌙</div>
+            </div>
+        </div>
+    </div>
+</button>
+
+<style>
+    .theme-toggle:hover .toggle-circle {
+        box-shadow: var(--neon-glow-intense);
+    }
+
+    .theme-toggle:focus {
+        outline: none;
+        box-shadow: var(--shadow-lg), 0 0 0 3px var(--accent-primary);
+    }
+</style>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        ThemeService.ThemeChanged += OnThemeChanged;
+        await ThemeService.InitializeAsync();
+    }
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleThemeAsync();
+    }
+
+    private void OnThemeChanged(string newTheme)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+
+}

@@ -10,28 +10,31 @@
 
 <PageTitle>All Ranj's Fault</PageTitle>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+<div class="min-h-screen p-4" style="background: linear-gradient(135deg, var(--bg-primary), var(--bg-tertiary));">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">Triangle Solver</h1>
+            <div class="flex items-center justify-center gap-4 mb-4">
+                <h1 class="text-4xl font-bold mb-2" style="color: var(--text-primary);">Triangle Solver</h1>
+                <ThemeToggle />
+            </div>
         </div>
 
         <!-- Main Content -->
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <!-- Triangle Visualization -->
             <div class="xl:col-span-2">
-                <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Triangle Visualization</h2>
+                <div class="rounded-2xl p-4" style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h2 class="text-2xl font-semibold mb-4" style="color: var(--text-primary);">Triangle Visualization</h2>
 
                     <!-- Angle X Slider -->
-                    <div class="mb-6">
+                    <div class="mb-4">
                         <AngleSlider @bind-Value="AngleX" Min="0" Max="120" Label="Angle x (∠FEB)"
                             OnValueChanged="OnAngleChanged" />
                     </div>
 
                     <!-- Triangle Container -->
-                    <div class="relative bg-gray-50 rounded-xl p-8 min-h-[600px]" @onclick="() => CloseAllPopups()">
+                    <div class="relative rounded-xl p-2 min-h-[600px]" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-secondary);" @onclick="() => CloseAllPopups()">
                         <TriangleRenderer @ref="triangleRenderer" Configuration="triangleConfig" XValue="angleX"
                             AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
                             OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.X, args.Y))" />
@@ -42,15 +45,15 @@
             <!-- Values Panel -->
             <div class="space-y-6">
                 <!-- Computed Values -->
-                <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Computed Values</h3>
+                <div class="rounded-2xl p-6" style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h3 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Computed Values</h3>
                     <ValuesDisplay AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
                         OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.X, args.Y))" />
                 </div>
 
                 <!-- Solver Status -->
-                <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Solver Status</h3>
+                <div class="rounded-2xl p-6" style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h3 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Solver Status</h3>
                     <SolverStatus Result="solverResult" Inconsistencies="inconsistencies"
                         IterationCount="iterationCount" />
                 </div>

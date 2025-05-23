@@ -1,5 +1,119 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+    /* Neon Light Theme */
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --bg-accent: #e2e8f0;
+
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-tertiary: #64748b;
+    --text-muted: #94a3b8;
+
+    --border-primary: #e2e8f0;
+    --border-secondary: #cbd5e1;
+    --border-accent: #94a3b8;
+
+    --accent-primary: #06b6d4;
+    --accent-secondary: #0891b2;
+    --accent-hover: #0e7490;
+
+    --success-bg: #dcfdf7;
+    --success-border: #a7f3d0;
+    --success-text: #065f46;
+    --success-accent: #10b981;
+
+    --error-bg: #fef2f2;
+    --error-border: #fecaca;
+    --error-text: #991b1b;
+    --error-accent: #ef4444;
+
+    --warning-bg: #fffbeb;
+    --warning-border: #fed7aa;
+    --warning-text: #92400e;
+    --warning-accent: #f59e0b;
+
+    --angle-gradient-start: #06b6d4;
+    --angle-gradient-mid: #8b5cf6;
+    --angle-gradient-end: #ec4899;
+
+    --segment-color: #10b981;
+    --triangle-stroke: #475569;
+    --triangle-bg: #ffffff;
+    --triangle-border: #d1d5db;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    --neon-glow: 0 0 20px var(--accent-primary);
+    --neon-glow-intense: 0 0 40px var(--accent-primary);
+}
+
+[data-theme="dark"] {
+    /* Neon Dark Theme */
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-accent: #475569;
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --text-muted: #64748b;
+
+    --border-primary: #475569;
+    --border-secondary: #64748b;
+    --border-accent: #94a3b8;
+
+    --accent-primary: #00d9ff;
+    --accent-secondary: #00b8e6;
+    --accent-hover: #0099cc;
+
+    --success-bg: #022c22;
+    --success-border: #166534;
+    --success-text: #bbf7d0;
+    --success-accent: #22d3ee;
+
+    --error-bg: #2d1b1b;
+    --error-border: #7f1d1d;
+    --error-text: #fca5a5;
+    --error-accent: #ff4757;
+
+    --warning-bg: #2d2517;
+    --warning-border: #a16207;
+    --warning-text: #fde68a;
+    --warning-accent: #fbbf24;
+
+    --angle-gradient-start: #00d9ff;
+    --angle-gradient-mid: #a855f7;
+    --angle-gradient-end: #ff006e;
+
+    --segment-color: #22d3ee;
+    --triangle-stroke: #cbd5e1;
+    --triangle-bg: #1e293b;
+    --triangle-border: #475569;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+
+    --neon-glow: 0 0 20px var(--accent-primary), 0 0 40px var(--accent-primary);
+    --neon-glow-intense: 0 0 40px var(--accent-primary), 0 0 80px var(--accent-primary);
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }

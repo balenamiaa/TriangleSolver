@@ -6,20 +6,21 @@
 @* Modal Container - acts like React's createPortal *@
 @foreach (var modal in ModalService.GetActiveModals())
 {
-    <div class="modal-overlay" 
-         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: @(modal.Options.ZIndex + GetModalIndex(modal)); pointer-events: auto;"
+    <div class="modal-overlay"
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: @(modal.Options.ZIndex + GetModalIndex(modal)); pointer-events: auto; background-color: rgba(0, 0, 0, 0.5);"
          @onclick="@(() => OnBackdropClick(modal))"
          @onkeydown="@((e) => OnKeyDown(e, modal))">
-        
+
         @if (modal.Id == "value-popup")
         {
-            <ValuePopupContent Modal="modal" OnClose="@(() => CloseModal(modal.Id))" />
+            <ValuePopupContent Modal="modal" OnClose="@(() => CloseModal(modal.Id))"/>
         }
         @* Add other modal types here as needed *@
     </div>
 }
 
 @code {
+
     protected override void OnInitialized()
     {
         ModalService.OnModalStateChanged += StateHasChanged;
@@ -56,4 +57,5 @@
     {
         await ModalService.HideModalAsync(modalId);
     }
+
 } 

@@ -1,13 +1,12 @@
-@using static Ranja.Client.Pages.Home
-@using Ranja.Solver
-
 <div class="values-display space-y-4">
     @if (AngleValues.Any())
     {
         <div class="angles-section">
-            <h4 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
-                <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            <h4 class="text-sm font-semibold mb-3 flex items-center" style="color: var(--text-secondary);">
+                <svg class="w-4 h-4 mr-2" style="color: var(--accent-primary);" fill="none" stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
                 Angles
             </h4>
@@ -17,28 +16,36 @@
                     var valueInfo = angle.Value;
                     var isInconsistent = valueInfo.IsInconsistent;
                     var angleId = FormatAngleName(angle.Key);
-                    <div class="value-item flex items-center justify-between p-3 rounded-lg border @(isInconsistent ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50") hover:shadow-md transition-all duration-200 cursor-pointer"
-                         @onclick="@(() => OnValueClickInternal(angleId))">
+                    <div
+                        class="value-item flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md"
+                        style="@(isInconsistent ? $"border-color: var(--error-border); background-color: var(--error-bg);" : $"border-color: var(--border-primary); background-color: var(--bg-tertiary);") box-shadow: var(--shadow-sm);"
+                        @onclick="@(() => OnValueClickInternal(angleId))">
                         <div class="flex items-center space-x-3">
-                            <div class="angle-icon w-8 h-8 rounded-full @(isInconsistent ? "bg-red-100" : "bg-blue-100") flex items-center justify-center">
-                                <span class="text-xs font-medium @(isInconsistent ? "text-red-600" : "text-blue-600")">∠</span>
+                            <div class="angle-icon w-8 h-8 rounded-full flex items-center justify-center"
+                                 style="@(isInconsistent ? $"background-color: var(--error-bg); border: 1px solid var(--error-border);" : $"background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); box-shadow: var(--neon-glow);")">
+                                <span class="text-xs font-medium"
+                                      style="color: @(isInconsistent ? "var(--error-text)" : "white");">∠</span>
                             </div>
                             <div>
-                                <div class="font-medium text-gray-900">∠@angleId</div>
+                                <div class="font-medium" style="color: var(--text-primary);">∠@angleId</div>
                                 @if (isInconsistent)
                                 {
-                                    <div class="text-xs text-red-600">Multiple values detected</div>
+                                    <div class="text-xs" style="color: var(--error-text);">Multiple values detected
+                                    </div>
                                 }
                                 else if (valueInfo.AllValues.Count > 1)
                                 {
-                                    <div class="text-xs text-blue-600">@(valueInfo.AllValues.Count) calculations</div>
+                                    <div class="text-xs"
+                                         style="color: var(--accent-primary);">@(valueInfo.AllValues.Count) calculations
+                                    </div>
                                 }
                             </div>
                         </div>
-                        <div class="value @(isInconsistent ? "text-red-600" : "text-gray-700") font-mono text-sm">
+                        <div class="value font-mono text-sm"
+                             style="color: @(isInconsistent ? "var(--error-text)" : "var(--text-secondary)");">
                             @if (isInconsistent)
                             {
-                                <span class="text-red-600 font-bold">??°</span>
+                                <span class="font-bold" style="color: var(--error-accent);">??°</span>
                             }
                             else
                             {
@@ -54,9 +61,11 @@
     @if (SegmentValues.Any())
     {
         <div class="segments-section">
-            <h4 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
-                <svg class="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            <h4 class="text-sm font-semibold mb-3 flex items-center" style="color: var(--text-secondary);">
+                <svg class="w-4 h-4 mr-2" style="color: var(--segment-color);" fill="none" stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                 </svg>
                 Segments
             </h4>
@@ -66,28 +75,36 @@
                     var valueInfo = segment.Value;
                     var isInconsistent = valueInfo.IsInconsistent;
                     var segmentId = FormatSegmentName(segment.Key);
-                    <div class="value-item flex items-center justify-between p-3 rounded-lg border @(isInconsistent ? "border-red-200 bg-red-50" : "border-gray-200 bg-gray-50") hover:shadow-md transition-all duration-200 cursor-pointer"
-                         @onclick="@(() => OnValueClickInternal(segmentId))">
+                    <div
+                        class="value-item flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-md"
+                        style="@(isInconsistent ? $"border-color: var(--error-border); background-color: var(--error-bg);" : $"border-color: var(--border-primary); background-color: var(--bg-tertiary);") box-shadow: var(--shadow-sm);"
+                        @onclick="@(() => OnValueClickInternal(segmentId))">
                         <div class="flex items-center space-x-3">
-                            <div class="segment-icon w-8 h-8 rounded-full @(isInconsistent ? "bg-red-100" : "bg-green-100") flex items-center justify-center">
-                                <span class="text-xs font-medium @(isInconsistent ? "text-red-600" : "text-green-600")">—</span>
+                            <div class="segment-icon w-8 h-8 rounded-full flex items-center justify-center"
+                                 style="@(isInconsistent ? $"background-color: var(--error-bg); border: 1px solid var(--error-border);" : $"background-color: var(--segment-color); box-shadow: 0 0 20px var(--segment-color);")">
+                                <span class="text-xs font-medium"
+                                      style="color: @(isInconsistent ? "var(--error-text)" : "white");">—</span>
                             </div>
                             <div>
-                                <div class="font-medium text-gray-900">@segmentId</div>
+                                <div class="font-medium" style="color: var(--text-primary);">@segmentId</div>
                                 @if (isInconsistent)
                                 {
-                                    <div class="text-xs text-red-600">Multiple values detected</div>
+                                    <div class="text-xs" style="color: var(--error-text);">Multiple values detected
+                                    </div>
                                 }
                                 else if (valueInfo.AllValues.Count > 1)
                                 {
-                                    <div class="text-xs text-green-600">@(valueInfo.AllValues.Count) calculations</div>
+                                    <div class="text-xs"
+                                         style="color: var(--segment-color);">@(valueInfo.AllValues.Count) calculations
+                                    </div>
                                 }
                             </div>
                         </div>
-                        <div class="value @(isInconsistent ? "text-red-600" : "text-gray-700") font-mono text-sm">
+                        <div class="value font-mono text-sm"
+                             style="color: @(isInconsistent ? "var(--error-text)" : "var(--text-secondary)");">
                             @if (isInconsistent)
                             {
-                                <span class="text-red-600 font-bold">??</span>
+                                <span class="font-bold" style="color: var(--error-accent);">??</span>
                             }
                             else
                             {
@@ -103,13 +120,16 @@
     @if (!AngleValues.Any() && !SegmentValues.Any())
     {
         <div class="empty-state text-center py-8">
-            <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+                 style="background-color: var(--bg-accent); border: 1px solid var(--border-primary);">
+                <svg class="w-8 h-8" style="color: var(--text-muted);" fill="none" stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                 </svg>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No Values Computed</h3>
-            <p class="text-gray-600">Adjust the angle slider to compute triangle values</p>
+            <h3 class="text-lg font-medium mb-2" style="color: var(--text-primary);">No Values Computed</h3>
+            <p style="color: var(--text-tertiary);">Adjust the angle slider to compute triangle values</p>
         </div>
     }
 </div>
@@ -125,7 +145,7 @@
     {
         var p1 = segment.P1.Content;
         var p2 = segment.P2.Content;
-        return string.Compare(p1, p2) < 0 ? $"{p1}{p2}" : $"{p2}{p1}";
+        return string.CompareOrdinal(p1, p2) < 0 ? $"{p1}{p2}" : $"{p2}{p1}";
     }
 
     private async Task OnValueClickInternal(string valueId) => await OnValueClick.InvokeAsync((valueId, 400, 300));

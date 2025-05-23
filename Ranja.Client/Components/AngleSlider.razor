@@ -1,13 +1,12 @@
-@using Microsoft.AspNetCore.Components.Web
 @implements IDisposable
 
 <div class="angle-slider-container">
-    <label class="block text-sm font-medium text-gray-700 mb-2">@Label</label>
+    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">@Label</label>
 
     <div class="relative py-4">
-        <div class="slider-track relative h-3 bg-gray-200 rounded-full shadow-inner">
-            <div class="slider-progress h-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full transition-all duration-75 ease-out shadow-sm"
-                 style="width: @(((Value - Min) / (Max - Min)) * 100)%"></div>
+        <div class="slider-track relative h-3 rounded-full shadow-inner" style="background-color: var(--bg-accent);">
+            <div class="slider-progress h-3 rounded-full transition-all duration-75 ease-out shadow-sm"
+                 style="width: @(((Value - Min) / (Max - Min)) * 100)%; background: @GetGradientForValue(Value);"></div>
 
             <div class="absolute inset-0 pointer-events-none">
                 @foreach (var tick in AngleTicks)
@@ -15,8 +14,10 @@
                     var position = ((tick.Value - Min) / (Max - Min)) * 100;
                     <div class="absolute top-0 left-0 w-full h-full">
                         <div class="absolute top-0" style="left: @(position)%">
-                            <div class="w-0.5 h-8 bg-gray-400 -mt-2.5 rounded-full"></div>
-                            <div class="text-xs text-gray-600 mt-2 text-center font-medium whitespace-nowrap">
+                            <div class="w-0.5 h-8 rounded-full -mt-2.5"
+                                 style="background-color: var(--border-accent);"></div>
+                            <div class="text-xs text-center font-medium whitespace-nowrap mt-2"
+                                 style="color: var(--text-tertiary);">
                                 @(tick.Value)°
                             </div>
                         </div>
@@ -36,15 +37,20 @@
         <div class="slider-thumb absolute top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10"
              style="left: @(((Value - Min) / (Max - Min)) * 100)%">
             <div class="relative">
-                <div class="w-7 h-7 bg-white border-3 border-blue-500 rounded-full shadow-lg transition-all duration-200 ring-2 ring-blue-200 ring-opacity-50">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+                <div class="w-7 h-7 border-3 rounded-full shadow-lg transition-all duration-200 ring-2 ring-opacity-50"
+                     style="background-color: var(--bg-secondary); border-color: var(--accent-primary); box-shadow: var(--neon-glow); --tw-ring-color: var(--accent-primary);">
+                    <div
+                        class="w-2 h-2 rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                        style="background-color: var(--accent-primary);"></div>
                 </div>
-                
+
                 <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                    <div class="bg-gray-800 text-white px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg">
+                    <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg"
+                         style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-primary); box-shadow: var(--shadow-lg);">
                         @Value.ToString("F1")°
                         <div class="absolute top-full left-1/2 transform -translate-x-1/2">
-                            <div class="w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                            <div class="w-2 h-2 transform rotate-45"
+                                 style="background-color: var(--bg-secondary); border-right: 1px solid var(--border-primary); border-bottom: 1px solid var(--border-primary);"></div>
                         </div>
                     </div>
                 </div>
@@ -54,12 +60,32 @@
 </div>
 
 <style>
-    .angle-slider-container { @@apply w-full; }
-    .slider-input::-webkit-slider-thumb { @@apply appearance-none w-7 h-7 cursor-pointer; }
-    .slider-input::-moz-range-thumb { @@apply appearance-none w-7 h-7 cursor-pointer border-0 bg-transparent; }
-    .slider-input:focus { outline: none; }
-    .slider-input:focus + .slider-thumb .w-7 { @@apply ring-4 ring-blue-400 ring-opacity-60; }
-    .slider-input:hover + .slider-thumb .w-7 { @@apply scale-110 ring-4 ring-blue-300 ring-opacity-40; }
+    .angle-slider-container {
+        @@apply w-full;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+        @@apply appearance-none w-7 h-7 cursor-pointer;
+    }
+
+    .slider-input::-moz-range-thumb {
+        @@apply appearance-none w-7 h-7 cursor-pointer border-0 bg-transparent;
+    }
+
+    .slider-input:focus {
+        outline: none;
+    }
+
+    .slider-input:focus + .slider-thumb .w-7 {
+        box-shadow: var(--neon-glow-intense) !important;
+        --tw-ring-opacity: 0.6;
+    }
+
+    .slider-input:hover + .slider-thumb .w-7 {
+        transform: scale(1.1);
+        box-shadow: var(--neon-glow-intense) !important;
+        --tw-ring-opacity: 0.4;
+    }
 </style>
 
 @code {
@@ -75,6 +101,25 @@
     private double pendingValue;
     private bool hasPendingValue = false;
 
+    private string GetGradientForValue(double value)
+    {
+        // Create dynamic gradient based on current value and tick positions
+        var progress = (value - Min) / (Max - Min);
+
+        return progress switch
+        {
+            // 0° to 30°
+            <= 0.25 => "linear-gradient(135deg, var(--angle-gradient-start), #22d3ee)",
+            // 30° to 45°
+            <= 0.375 => "linear-gradient(135deg, #22d3ee, var(--angle-gradient-mid))",
+            // 45° to 60°
+            <= 0.5 => "linear-gradient(135deg, var(--angle-gradient-mid), #a855f7)",
+            // 60° to 90°
+            <= 0.75 => "linear-gradient(135deg, #a855f7, var(--angle-gradient-end))",
+            _ => "linear-gradient(135deg, var(--angle-gradient-end), #ff1744)"
+        };
+    }
+
     private async Task OnSliderInput(ChangeEventArgs e)
     {
         if (double.TryParse(e.Value?.ToString(), out var newValue))
@@ -82,20 +127,25 @@
             Value = newValue;
             await ValueChanged.InvokeAsync(Value);
             StateHasChanged();
-            
+
             if (OnValueChanged.HasDelegate)
             {
                 pendingValue = newValue;
                 hasPendingValue = true;
-                
-                throttleTimer?.Dispose();
+
+                throttleTimer?.DisposeAsync();
                 throttleTimer = new Timer(async _ =>
                 {
-                    if (hasPendingValue)
+                    try
                     {
+                        if (!hasPendingValue) return;
                         var valueToProcess = pendingValue;
                         hasPendingValue = false;
                         await InvokeAsync(async () => await OnValueChanged.InvokeAsync(valueToProcess));
+                    }
+                    catch
+                    {
+                        // Silently ignore timer exceptions
                     }
                 }, null, TimeSpan.FromMilliseconds(50), Timeout.InfiniteTimeSpan);
             }
