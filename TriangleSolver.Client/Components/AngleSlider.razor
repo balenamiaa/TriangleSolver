@@ -1,0 +1,159 @@
+@implements IDisposable
+
+<div class="angle-slider-container">
+    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">@Label</label>
+
+    <div class="relative py-4">
+        <div class="slider-track relative h-3 rounded-full shadow-inner" style="background-color: var(--bg-accent);">
+            <div class="slider-progress h-3 rounded-full transition-all duration-75 ease-out shadow-sm"
+                style="width: @(((Value - Min) / (Max - Min)) * 100)%; background: @GetGradientForValue(Value);"></div>
+
+            <div class="absolute inset-0 pointer-events-none">
+                @foreach (var tick in AngleTicks)
+                {
+                    var position = ((tick.Value - Min) / (Max - Min)) * 100;
+                    <div class="absolute top-0 left-0 w-full h-full">
+                        <div class="absolute top-0 transform -translate-x-1/2" style="left: @(position)%">
+                            <div class="w-0.5 h-8 rounded-full -mt-2.5 mx-auto"
+                                style="background-color: var(--border-accent);"> </div>
+                            <div class="text-xs text-center font-medium whitespace-nowrap mt-2 select-none"
+                                style="color: var(--text-tertiary);"> @(tick.Value)° </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <input type="range" value="@Value" @oninput="OnSliderInput" min="@Min" max="@Max" step="0.5"
+            class="slider-input absolute top-4 w-full h-3 opacity-0 cursor-pointer" />
+
+        <div class="slider-thumb absolute top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10"
+            style="left: @(((Value - Min) / (Max - Min)) * 100)%">
+            <div class="relative">
+                <div class="w-7 h-7 border-3 rounded-full shadow-lg transition-all duration-200 ring-2 ring-opacity-50"
+                    style="background-color: var(--bg-secondary); border-color: @GetThumbColor(Value); box-shadow: 0 0 20px @GetThumbColor(Value); --tw-ring-color: @GetThumbColor(Value);">
+                    <div class="w-2 h-2 rounded-full absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                        style="background-color: @GetThumbColor(Value);"></div>
+                </div>
+
+                <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                    <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg select-none"
+                        style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-primary); box-shadow: var(--shadow-lg);">
+                        @Value.ToString("F1")°
+                        <div class="absolute top-full left-1/2 transform -translate-x-1/2">
+                            <div class="w-2 h-2 transform rotate-45"
+                                style="background-color: var(--bg-secondary); border-right: 1px solid var(--border-primary); border-bottom: 1px solid var(--border-primary);">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .angle-slider-container {
+        @@apply w-full;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+        @@apply appearance-none w-7 h-7 cursor-pointer;
+    }
+
+    .slider-input::-moz-range-thumb {
+        @@apply appearance-none w-7 h-7 cursor-pointer border-0 bg-transparent;
+    }
+
+    .slider-input:focus {
+        outline: none;
+    }
+
+    .slider-input:focus+.slider-thumb .w-7 {
+        box-shadow: var(--neon-glow-intense) !important;
+        --tw-ring-opacity: 0.6;
+    }
+
+    .slider-input:hover+.slider-thumb .w-7 {
+        transform: scale(1.1);
+        box-shadow: var(--neon-glow-intense) !important;
+        --tw-ring-opacity: 0.4;
+    }
+</style>
+
+@code {
+    [Parameter] public double Value { get; set; } = 30.0;
+    [Parameter] public EventCallback<double> ValueChanged { get; set; }
+    [Parameter] public EventCallback<double> OnValueChanged { get; set; }
+    [Parameter] public double Min { get; set; } = 0;
+    [Parameter] public double Max { get; set; } = 120;
+    [Parameter] public string Label { get; set; } = "Angle";
+
+    private readonly List<(double Value, string Label)> AngleTicks = [(0, "0"), (30, "30"), (45, "45"), (60, "60"), (90,
+"90"), (120, "120")];
+    private Timer? throttleTimer;
+    private double pendingValue;
+    private bool hasPendingValue = false;
+
+    private string GetGradientForValue(double value)
+    {
+        var progress = (value - Min) / (Max - Min);
+
+        return progress switch
+        {
+            <= 0.25 => "linear-gradient(135deg, var(--angle-gradient-start), #22d3ee)",
+            <= 0.375 => "linear-gradient(135deg, #22d3ee, var(--angle-gradient-mid))",
+            <= 0.5 => "linear-gradient(135deg, var(--angle-gradient-mid), #a855f7)",
+            <= 0.75 => "linear-gradient(135deg, #a855f7, var(--angle-gradient-end))",
+            _ => "linear-gradient(135deg, var(--angle-gradient-end), #ff1744)"
+        };
+    }
+
+    private string GetThumbColor(double value)
+    {
+        var progress = (value - Min) / (Max - Min);
+
+        return progress switch
+        {
+            <= 0.25 => "#3b82f6", // Blue
+            <= 0.375 => "#22d3ee", // Cyan
+            <= 0.5 => "#8b5cf6", // Purple
+            <= 0.75 => "#ec4899", // Pink
+            _ => "#ef4444" // Red
+        };
+    }
+
+    private async Task OnSliderInput(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var newValue))
+        {
+            Value = newValue;
+            await ValueChanged.InvokeAsync(Value);
+            StateHasChanged();
+
+            if (OnValueChanged.HasDelegate)
+            {
+                pendingValue = newValue;
+                hasPendingValue = true;
+
+                throttleTimer?.DisposeAsync();
+                throttleTimer = new Timer(async _ =>
+                {
+                    try
+                    {
+                        if (!hasPendingValue) return;
+                        var valueToProcess = pendingValue;
+                        hasPendingValue = false;
+                        await InvokeAsync(async () => await OnValueChanged.InvokeAsync(valueToProcess));
+                    }
+                    catch
+                    {
+                        // Silently ignore timer exceptions
+                    }
+                }, null, TimeSpan.FromMilliseconds(50), Timeout.InfiniteTimeSpan);
+            }
+        }
+    }
+
+    public void Dispose() => throttleTimer?.Dispose();
+}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<linker>
+  <!-- Preserve main application assemblies -->
+  <assembly fullname="TriangleSolver.Client" preserve="all" />
+  <assembly fullname="TriangleSolver.Solver" preserve="all" />
+  
+  <!-- Preserve minimal System assemblies -->
+  <assembly fullname="System.Private.CoreLib">
+    <type fullname="System.String" preserve="all" />
+    <type fullname="System.Object" preserve="all" />
+    <type fullname="System.Exception" preserve="all" />
+    <type fullname="System.Collections.Generic.*" preserve="all" />
+    <type fullname="System.Threading.Tasks.*" preserve="all" />
+  </assembly>
+  
+  <!-- Preserve minimal Blazor functionality -->
+  <assembly fullname="Microsoft.AspNetCore.Components">
+    <type fullname="Microsoft.AspNetCore.Components.ComponentBase" preserve="all" />
+    <type fullname="Microsoft.AspNetCore.Components.ParameterAttribute" preserve="all" />
+    <type fullname="Microsoft.AspNetCore.Components.InjectAttribute" preserve="all" />
+  </assembly>
+  
+  <assembly fullname="Microsoft.AspNetCore.Components.Web">
+    <type fullname="Microsoft.AspNetCore.Components.Web.*" preserve="all" />
+  </assembly>
+  
+  <assembly fullname="Microsoft.AspNetCore.Components.WebAssembly">
+    <type fullname="Microsoft.AspNetCore.Components.WebAssembly.*" preserve="all" />
+  </assembly>
+  
+  <!-- Remove unused assemblies entirely -->
+  <assembly fullname="Microsoft.VisualBasic.Core" preserve="nothing" />
+  <assembly fullname="System.Data.Common" preserve="nothing" />
+  <assembly fullname="System.Linq.Parallel" preserve="nothing" />
+  <assembly fullname="System.Linq.Queryable" preserve="nothing" />
+  <assembly fullname="System.Text.Encoding.CodePages" preserve="nothing" />
+  <assembly fullname="System.Private.DataContractSerialization" preserve="nothing" />
+  <assembly fullname="Microsoft.CSharp" preserve="nothing" />
+  <assembly fullname="System.Linq.AsyncEnumerable" preserve="nothing" />
+  <assembly fullname="System.Transactions.Local" preserve="nothing" />
+  <assembly fullname="System.Security.Cryptography.Algorithms" preserve="nothing" />
+  <assembly fullname="System.Security.Cryptography" preserve="nothing" />
+</linker> 

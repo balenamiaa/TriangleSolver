@@ -1,0 +1,237 @@
+@inject IJSRuntime JSRuntime
+
+<div class="triangle-container relative" @ref="containerElement">
+    <svg viewBox="0 0 @Configuration.SvgViewBox.Width @Configuration.SvgViewBox.Height" class="w-full h-full rounded-lg"
+        style="border: 1px solid var(--triangle-border); background-color: var(--triangle-bg);">
+
+        @foreach (var line in Configuration.Lines)
+        {
+            var p1 = GetSvgPoint(line.Segment.P1.Content);
+            var p2 = GetSvgPoint(line.Segment.P2.Content);
+
+            @if (p1 != null && p2 != null)
+            {
+                <line x1="@p1.Value.X" y1="@p1.Value.Y" x2="@p2.Value.X" y2="@p2.Value.Y" stroke="var(--triangle-stroke)"
+                    stroke-width="2" />
+
+                @if (SegmentValues.TryGetValue(line.Segment, out var segmentValueInfo))
+                {
+                    var segmentTextPos = CalculateSegmentTextPosition(p1.Value, p2.Value);
+                    var displayText = segmentValueInfo.IsInconsistent ? "??" : segmentValueInfo.DisplayValue.ToString("F1");
+                    var textColor = segmentValueInfo.IsInconsistent ? "var(--error-accent)" : "var(--segment-color)";
+                    var segmentId = FormatSegmentId(line.Segment);
+
+                    <text>
+                        <text @ref="segmentElementRefs[segmentId]" x="@segmentTextPos.X" y="@segmentTextPos.Y" font-size="12"
+                            font-weight="600" fill="@textColor" text-anchor="middle" dominant-baseline="central"
+                            class="cursor-pointer select-none" style="cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);"
+                            @onclick="@(() => OnValueClickInternal(segmentId))" @onclick:stopPropagation="true">
+                            @displayText
+                        </text>
+                    </text>
+                }
+            }
+        }
+
+        @foreach (var pointPair in Configuration.Points)
+        {
+            var pointName = pointPair.Key;
+            var svgPoint = GetSvgPoint(pointName);
+
+            @if (svgPoint != null)
+            {
+                <circle cx="@svgPoint.Value.X" cy="@svgPoint.Value.Y" r="4" fill="var(--accent-primary)" />
+                var labelPos = GetPointLabelPosition(svgPoint.Value, pointPair.Value);
+                <text>
+                    <text x="@labelPos.X" y="@labelPos.Y" font-size="18" font-weight="bold" fill="var(--accent-secondary)"
+                        class="select-none" text-anchor="middle" dominant-baseline="central">
+                        @pointName
+                    </text>
+                </text>
+            }
+        }
+
+        @* Render calculated point D if it exists *@
+        @if (_svgPoints.TryGetValue("D", out var dPoint))
+        {
+            <circle cx="@dPoint.X" cy="@dPoint.Y" r="4" fill="var(--accent-primary)" />
+
+            var dLabelPos = new Vector2D(dPoint.X, dPoint.Y + 12);
+
+            <text>
+                <text x="@dLabelPos.X" y="@dLabelPos.Y" font-size="18" font-weight="bold" fill="var(--accent-secondary)"
+                    class="select-none" text-anchor="middle" dominant-baseline="central">
+                    D
+                </text>
+            </text>
+        }
+
+        @foreach (var angle in Configuration.Angles)
+        {
+            var p1 = GetSvgPoint(angle.Angle.P1.Content);
+            var vertex = GetSvgPoint(angle.Angle.Vertex.Content);
+            var p2 = GetSvgPoint(angle.Angle.P2.Content);
+
+            @if (p1 != null && vertex != null && p2 != null)
+            {
+                var arcPath = GeometryUtils.CalculateAngleArc(p1.Value, vertex.Value, p2.Value, angle.Radius);
+                <path d="@arcPath" fill="none" stroke="@angle.Color" stroke-width="1.2" />
+
+                var labelPos = GeometryUtils.CalculateAngleLabelPosition(p1.Value, vertex.Value, p2.Value, angle.Radius,
+                angle.TextOffsetScale);
+                var displayValue = GetAngleDisplayValue(angle);
+                var angleColor = GetAngleColor(angle);
+                var angleId = FormatAngleId(angle.Angle);
+                var isVariable = IsVariableAngle(angle.Angle);
+
+                <text>
+                    <text @ref="angleElementRefs[angleId]" x="@labelPos.X" y="@labelPos.Y"
+                        font-size="@(isVariable ? "14" : "12")" class="select-none cursor-pointer"
+                        font-style="@(isVariable ? "italic" : "normal")" font-weight="@angle.FontWeight" fill="@angleColor"
+                        text-anchor="middle" dominant-baseline="central" style="cursor: pointer"
+                        @onclick="@(() => OnValueClickInternal(angleId))" @onclick:stopPropagation="true">
+                        @displayValue
+                    </text>
+                </text>
+            }
+        }
+    </svg>
+</div>
+
+@code {
+    [Parameter] public TriangleConfiguration Configuration { get; set; } = null!;
+    [Parameter] public double XValue { get; set; } = 30.0;
+    [Parameter] public Dictionary<Angle, ValueInfo> AngleValues { get; set; } = new();
+    [Parameter] public Dictionary<Segment, ValueInfo> SegmentValues { get; set; } = new();
+    [Parameter] public EventCallback<(string ValueId, ElementReference ElementRef)> OnValueClick { get; set; }
+
+    private ElementReference containerElement;
+    private Dictionary<string, Vector2D> _svgPoints = new();
+    private readonly Angle _febAngle = Angle.FromString("FEB");
+    private Dictionary<string, ElementReference> angleElementRefs = new();
+    private Dictionary<string, ElementReference> segmentElementRefs = new();
+
+    protected override void OnParametersSet()
+    {
+        CalculateSvgPoints();
+    }
+
+    private void CalculateSvgPoints()
+    {
+        _svgPoints.Clear();
+
+        foreach (var pointPair in Configuration.Points)
+        {
+            var svgPoint = GeometryUtils.TransformPoint(pointPair.Value.LogicalCoords, Configuration.LogicalCoords,
+            Configuration.SvgViewBox);
+            _svgPoints[pointPair.Key] = svgPoint;
+        }
+
+        if (_svgPoints.ContainsKey("B") && _svgPoints.ContainsKey("E") && _svgPoints.ContainsKey("C") &&
+        _svgPoints.ContainsKey("F"))
+        {
+            var bLogical = Configuration.Points["B"].LogicalCoords;
+            var eLogical = Configuration.Points["E"].LogicalCoords;
+            var cLogical = Configuration.Points["C"].LogicalCoords;
+            var fLogical = Configuration.Points["F"].LogicalCoords;
+
+            var intersection = GeometryUtils.LineIntersection(new LineSegment(bLogical, eLogical), new LineSegment(cLogical,
+            fLogical));
+            if (intersection.HasValue)
+            {
+                var dSvg = GeometryUtils.TransformPoint(intersection.Value, Configuration.LogicalCoords, Configuration.SvgViewBox);
+                _svgPoints["D"] = dSvg;
+            }
+        }
+    }
+
+    private Vector2D? GetSvgPoint(string pointName) => _svgPoints.TryGetValue(pointName, out var point) ? point : null;
+
+    private string FormatAngleId(Angle angle) => $"{angle.P1.Content}{angle.Vertex.Content}{angle.P2.Content}";
+
+    private string FormatSegmentId(Segment segment)
+    {
+        var p1 = segment.P1.Content;
+        var p2 = segment.P2.Content;
+        return string.CompareOrdinal(p1, p2) < 0 ? $"{p1}{p2}" : $"{p2}{p1}";
+    }
+
+    private bool IsVariableAngle(Angle angle) => angle.Equals(_febAngle);
+
+    private string GetAngleDisplayValue(AngleDefinition angle)
+    {
+        if (IsVariableAngle(angle.Angle)) return $"{XValue:F1}°";
+
+        if (AngleValues.TryGetValue(angle.Angle, out var solvedValueInfo))
+            return solvedValueInfo.IsInconsistent ? "??°" : $"{solvedValueInfo.DisplayValue:F0}°";
+
+        return angle.DisplayValue;
+    }
+
+    private string GetAngleColor(AngleDefinition angle)
+    {
+        if (IsVariableAngle(angle.Angle)) return angle.Color;
+
+        if (AngleValues.TryGetValue(angle.Angle, out var solvedValueInfo) && solvedValueInfo.IsInconsistent)
+            return "#dc2626";
+
+        return angle.Color;
+    }
+
+    private Vector2D GetPointLabelPosition(Vector2D svgPoint, PointDefinition pointDef)
+    {
+        var offset = 12.0;
+        return pointDef.LabelPosition switch
+        {
+            LabelPosition.VerticalAbove => new Vector2D(svgPoint.X, svgPoint.Y - offset),
+            LabelPosition.VerticalBelow => new Vector2D(svgPoint.X, svgPoint.Y + offset),
+            LabelPosition.HorizontalRight => new Vector2D(svgPoint.X + offset, svgPoint.Y),
+            LabelPosition.HorizontalLeft => new Vector2D(svgPoint.X - offset, svgPoint.Y),
+            _ => new Vector2D(svgPoint.X, svgPoint.Y - offset)
+        };
+    }
+
+    private Vector2D CalculateSegmentTextPosition(Vector2D p1, Vector2D p2)
+    {
+        var midX = (p1.X + p2.X) / 2;
+        var midY = (p1.Y + p2.Y) / 2;
+
+        var lineVec = new Vector2D(p2.X - p1.X, p2.Y - p1.Y);
+        var lineLength = lineVec.Magnitude;
+
+        if (lineLength < 1e-6)
+            return new Vector2D(midX, midY - 8);
+
+        var perpVec = new Vector2D(-lineVec.Y, lineVec.X);
+        var perpUnit = perpVec.Normalized;
+
+        var offset = 10.0;
+        return new Vector2D(midX + perpUnit.X * offset, midY + perpUnit.Y * offset);
+    }
+
+    private async Task OnValueClickInternal(string valueId)
+    {
+        ElementReference elementRef;
+
+        if (angleElementRefs.TryGetValue(valueId, out elementRef))
+        {
+            await OnValueClick.InvokeAsync((valueId, elementRef));
+        }
+        else if (segmentElementRefs.TryGetValue(valueId, out elementRef))
+        {
+            await OnValueClick.InvokeAsync((valueId, elementRef));
+        }
+        else
+        {
+            throw new InvalidOperationException($"ElementReference not found for value: {valueId}");
+        }
+    }
+
+    public async Task UpdateVisualization()
+    {
+        CalculateSvgPoints();
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+}

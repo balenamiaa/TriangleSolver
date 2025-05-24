@@ -1,0 +1,111 @@
+@using TriangleSolver.Client.Services
+@inject IModalService ModalService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+@foreach (var modal in ModalService.GetActiveModals())
+{
+    <div class="modal-overlay"
+        style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: @(modal.Options.ZIndex + GetModalIndex(modal)); pointer-events: auto; background-color: rgba(0, 0, 0, 0.5);"
+        @onclick="@(() => OnBackdropClick(modal))" @onkeydown="@((e) => OnKeyDown(e, modal))">
+
+        @if (modal.Id == "value-popup")
+        {
+            <ValuePopupContent Modal="modal" OnClose="@(() => CloseModal(modal.Id))" />
+        }
+
+    </div>
+}
+
+@code {
+    private DotNetObjectReference<ModalContainer>? objRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ModalService.OnModalStateChanged += StateHasChanged;
+        objRef = DotNetObjectReference.Create(this);
+
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("modalUtils.setupScrollListeners", objRef);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to setup modal scroll listeners: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("modalUtils.init");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize modal utilities: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnScrollOrResize()
+    {
+        try
+        {
+            await ModalService.UpdateModalPositionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating modal positions: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        ModalService.OnModalStateChanged -= StateHasChanged;
+        objRef?.Dispose();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("modalUtils.cleanup");
+            }
+            catch
+            {
+
+            }
+        });
+    }
+
+    private int GetModalIndex(ModalInfo modal)
+    {
+        var modals = ModalService.GetActiveModals().ToList();
+        return modals.IndexOf(modal);
+    }
+
+    private async Task OnBackdropClick(ModalInfo modal)
+    {
+        if (modal.Options.CloseOnBackdropClick)
+        {
+            await ModalService.HideModalAsync(modal.Id);
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e, ModalInfo modal)
+    {
+        if (e.Key == "Escape" && modal.Options.CloseOnEscape)
+        {
+            await ModalService.HideModalAsync(modal.Id);
+        }
+    }
+
+    private async Task CloseModal(string modalId)
+    {
+        await ModalService.HideModalAsync(modalId);
+    }
+}

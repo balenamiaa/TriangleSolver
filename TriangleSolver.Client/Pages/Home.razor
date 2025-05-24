@@ -1,0 +1,317 @@
+﻿@page "/"
+@using TriangleSolver.Client.Services
+@using TriangleSolver.Client.Models
+@using TriangleSolver.Client.Components
+@using TriangleSolver.Solver
+@using System.Diagnostics
+@inject IJSRuntime JSRuntime
+@inject IModalService ModalService
+@implements IDisposable
+
+<PageTitle>Triangle Solver</PageTitle>
+
+<div class="min-h-screen p-2" style="background: linear-gradient(135deg, var(--bg-primary), var(--bg-tertiary));">
+    <div class="mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <div class="flex items-center justify-center gap-4 mb-2">
+                <h1 class="text-3xl font-bold mb-1" style="color: var(--text-primary);">Triangle Solver</h1>
+                <ThemeToggle />
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+            <!-- Triangle Visualization -->
+            <div class="lg:col-span-3">
+                <div class="rounded-xl p-3"
+                    style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h2 class="text-xl font-semibold mb-3" style="color: var(--text-primary);">Triangle Visualization
+                    </h2>
+
+                    <!-- Angle X Slider -->
+                    <div class="mb-3">
+                        <AngleSlider @bind-Value="AngleX" Min="0" Max="120" Label="Angle x (∠FEB)"
+                            OnValueChanged="OnAngleChanged" />
+                    </div>
+
+                    <!-- Triangle Container -->
+                    <div class="relative rounded-xl mt-4 p-2 min-h-[600px]"
+                        style="background-color: var(--bg-tertiary); border: 1px solid var(--border-secondary);"
+                        @onclick="() => CloseAllPopups()">
+                        <TriangleRenderer @ref="triangleRenderer" Configuration="triangleConfig" XValue="angleX"
+                            AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
+                            OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.ElementRef))" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Values Panel -->
+            <div class="space-y-3">
+                <!-- Computed Values -->
+                <div class="rounded-xl p-3"
+                    style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h3 class="text-lg font-semibold mb-3" style="color: var(--text-primary);">Computed Values</h3>
+                    <ValuesDisplay AngleValues="currentAngleValues" SegmentValues="currentSegmentValues"
+                        OnValueClick="@((args) => ShowValuePopup(args.ValueId, args.ElementRef))" />
+                </div>
+
+                <!-- Solver Status -->
+                <div class="rounded-xl p-3"
+                    style="background-color: var(--bg-secondary); box-shadow: var(--shadow-xl); border: 1px solid var(--border-primary);">
+                    <h3 class="text-lg font-semibold mb-3" style="color: var(--text-primary);">Solver Status</h3>
+                    <SolverStatus Result="solverResult" Inconsistencies="inconsistencies"
+                        IterationCount="iterationCount" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private TriangleRenderer? triangleRenderer;
+
+    private double angleX = 30.0;
+    private TriangleConfiguration triangleConfig = default!;
+
+    private Dictionary<Angle, ValueInfo> currentAngleValues = new();
+    private Dictionary<Segment, ValueInfo> currentSegmentValues = new();
+    private List<string> inconsistencies = [];
+
+    private Solver.SolveResult solverResult;
+    private int iterationCount;
+    private bool isComputing = false;
+    private double lastComputedAngle = -1;
+
+    public double AngleX
+    {
+        get => angleX;
+        set
+        {
+            if (Math.Abs(angleX - value) > 0.01)
+            {
+                angleX = value;
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        InitializeTriangleConfiguration();
+        SolveTriangle();
+    }
+
+    private void InitializeTriangleConfiguration()
+    {
+        triangleConfig = new TriangleConfiguration
+        {
+            LogicalCoords = new LogicalCoordinates(-80, 80, -48, 48),
+            SvgViewBox = new SvgViewBox(600, 400),
+
+            Points = new Dictionary<string, PointDefinition>
+            {
+                ["A"] = new(new Vector2D(71.8, 0), LabelPosition.VerticalAbove, "12"),
+                ["B"] = new(new Vector2D(-70, 25), LabelPosition.VerticalAbove, "12"),
+                ["C"] = new(new Vector2D(-70, -25), LabelPosition.VerticalBelow, "12"),
+                ["E"] = new(new Vector2D(-3.7, -13.3), LabelPosition.VerticalBelow, "12"),
+                ["F"] = new(new Vector2D(-20.8, 16.3), LabelPosition.VerticalAbove, "12")
+            },
+
+            Lines =
+        [
+        new(Segment.FromString("AF")), new(Segment.FromString("FB")), new(Segment.FromString("BC")),
+new(Segment.FromString("CE")), new(Segment.FromString("EA")), new(Segment.FromString("EF")),
+new(Segment.FromString("ED")), new(Segment.FromString("DC")), new(Segment.FromString("DF")),
+new(Segment.FromString("DB")),
+],
+
+            Angles =
+        [
+        new AngleDefinition(Angle.FromString("CBE"), "60°", 16, 1.5),
+new AngleDefinition(Angle.FromString("EBA"), "20°", 36, 1.5),
+new AngleDefinition(Angle.FromString("BCF"), "50°", 18, 1.6),
+new AngleDefinition(Angle.FromString("FCA"), "30°", 18, 1.6),
+new AngleDefinition(Angle.FromString("FEB"), "x", 24, 1.5, "#b91c1c", "bold"),
+new AngleDefinition(Angle.FromString("CEB"), "", 24, 1.5),
+new AngleDefinition(Angle.FromString("AEF"), "", 24, 1.5),
+new AngleDefinition(Angle.FromString("BDC"), "", 12, 1.95),
+new AngleDefinition(Angle.FromString("FDE"), "", 12, 1.95),
+new AngleDefinition(Angle.FromString("BDF"), "", 12, 1.95),
+new AngleDefinition(Angle.FromString("CDE"), "", 12, 1.95),
+new AngleDefinition(Angle.FromString("BFD"), "", 16, 1.75),
+new AngleDefinition(Angle.FromString("AFE"), "", 16, 1.75),
+new AngleDefinition(Angle.FromString("EFC"), "", 16, 1.5),
+new AngleDefinition(Angle.FromString("CAB"), "", 24, 1.5),
+]
+        };
+    }
+
+    private async Task OnAngleChanged(double newValue)
+    {
+        if (!isComputing)
+        {
+            AngleX = newValue;
+            await SolveTriangleAsync();
+        }
+    }
+
+    private void SolveTriangle() => _ = SolveTriangleAsync();
+
+    private async Task SolveTriangleAsync()
+    {
+        if (isComputing || Math.Abs(angleX - lastComputedAngle) < 0.01) return;
+
+        isComputing = true;
+        lastComputedAngle = angleX;
+        var currentAngle = angleX;
+
+        try
+        {
+            var (newAngleValues, newSegmentValues, newInconsistencies, newSolverResult, newIterationCount) =
+            await Task.Run(() => ComputeSolution(currentAngle));
+
+            currentAngleValues.Clear();
+            currentSegmentValues.Clear();
+            inconsistencies.Clear();
+
+            foreach (var kvp in newAngleValues) currentAngleValues[kvp.Key] = kvp.Value;
+            foreach (var kvp in newSegmentValues) currentSegmentValues[kvp.Key] = kvp.Value;
+
+            inconsistencies.AddRange(newInconsistencies);
+            solverResult = newSolverResult;
+            iterationCount = newIterationCount;
+
+            StateHasChanged();
+            if (triangleRenderer != null) _ = triangleRenderer.UpdateVisualization();
+        }
+        finally { isComputing = false; }
+    }
+
+    private (Dictionary<Angle, ValueInfo>, Dictionary<Segment, ValueInfo>, List<string>, Solver.SolveResult, int)
+    ComputeSolution(double angle)
+    {
+        var solver = new TriangleSolver.Solver.Solver() { Rules = Problem1Rules.Rules };
+
+        solver.AddGivenAngleValue(TriangleSolver.Solver.Angle.FromString("DBA"), 20);
+        solver.AddGivenAngleValue(TriangleSolver.Solver.Angle.FromString("CBD"), 60);
+        solver.AddGivenAngleValue(TriangleSolver.Solver.Angle.FromString("ACD"), 30);
+        solver.AddGivenAngleValue(TriangleSolver.Solver.Angle.FromString("DCB"), 50);
+        solver.AddGivenAngleValue(TriangleSolver.Solver.Angle.FromString("FED"), angle);
+        solver.AddGivenSegmentValue(TriangleSolver.Solver.Segment.FromString("BC"), 1.0);
+
+        var result = solver.Solve();
+        var iterations = solver.IterationsUsed;
+
+        var angleValues = ProcessAngleValues(solver);
+        var segmentValues = ProcessSegmentValues(solver);
+        var inconsistencyList = new List<string>(solver.Inconsistencies);
+
+        return (angleValues, segmentValues, inconsistencyList, result, iterations);
+    }
+
+    private Dictionary<Angle, ValueInfo> ProcessAngleValues(TriangleSolver.Solver.Solver solver)
+    {
+        var angleValues = new Dictionary<Angle, ValueInfo>();
+        foreach (var kvp in solver.AngleStorage.AngleValues)
+        {
+            var distinctValues = solver.GetDistinctAngleValues(kvp.Key).ToList();
+            var allValueDetails = new List<ValueDetail>();
+            var hasInconsistencies = false;
+
+            foreach (var value in kvp.Value)
+            {
+                var (numericValue, reason) = value switch
+                {
+                    GivenAngleValue gav => (gav.Value, $"Given: {gav.Value:F1}°"),
+                    ComputedAngleValue cav => (cav.Value, cav.Reason),
+                    InconsistencyAngleValue iav => (double.NaN, $"Inconsistency: {iav.Description}"),
+                    _ => (double.NaN, "Unknown source")
+                };
+
+                allValueDetails.Add(new ValueDetail(numericValue, reason));
+                if (value is InconsistencyAngleValue) hasInconsistencies = true;
+            }
+
+            if (allValueDetails.Any())
+            {
+                var isInconsistent = distinctValues.Count > 1 || hasInconsistencies;
+                angleValues[kvp.Key] = new ValueInfo(distinctValues, allValueDetails, isInconsistent);
+            }
+        }
+        return angleValues;
+    }
+
+    private Dictionary<Segment, ValueInfo> ProcessSegmentValues(TriangleSolver.Solver.Solver solver)
+    {
+        var segmentValues = new Dictionary<Segment, ValueInfo>();
+        foreach (var kvp in solver.SegmentStorage.SegmentValues)
+        {
+            var distinctValues = solver.GetDistinctSegmentValues(kvp.Key).ToList();
+            var allValueDetails = new List<ValueDetail>();
+            var hasInconsistencies = false;
+
+            foreach (var value in kvp.Value)
+            {
+                var (numericValue, reason) = value switch
+                {
+                    GivenSegmentValue gsv => (gsv.Value, $"Given: {gsv.Value:F2}"),
+                    ComputedSegmentValue csv => (csv.Value, csv.Reason),
+                    InconsistencySegmentValue isv => (double.NaN, $"Inconsistency: {isv.Description}"),
+                    _ => (double.NaN, "Unknown source")
+                };
+
+                allValueDetails.Add(new ValueDetail(numericValue, reason));
+                if (value is InconsistencySegmentValue) hasInconsistencies = true;
+            }
+
+            if (allValueDetails.Any())
+            {
+                var isInconsistent = distinctValues.Count > 1 || hasInconsistencies;
+                segmentValues[kvp.Key] = new ValueInfo(distinctValues, allValueDetails, isInconsistent);
+            }
+        }
+        return segmentValues;
+    }
+
+    private async Task ShowValuePopup(string valueId, ElementReference elementRef)
+    {
+        ValueInfo? valueInfo = null;
+        bool isAngle = valueId.Length == 3;
+
+        if (isAngle)
+        {
+            var angle = Angle.FromString(valueId);
+            currentAngleValues.TryGetValue(angle, out valueInfo);
+        }
+        else if (valueId.Length == 2)
+        {
+            var segment = Segment.FromString(valueId);
+            currentSegmentValues.TryGetValue(segment, out valueInfo);
+        }
+
+        if (valueInfo != null)
+        {
+            var valueData = new ValuePopupData(valueId, valueInfo.AllValues, valueInfo.AllValueDetails, valueInfo.IsInconsistent,
+            isAngle);
+
+            var options = new ModalOptions(
+            TargetElementRef: elementRef,
+            Position: ModalPosition.TopCenter,
+            CloseOnBackdropClick: true,
+            CloseOnEscape: true,
+            ZIndex: 1000
+            );
+
+            await ModalService.ShowModalAsync("value-popup", valueData, options);
+        }
+    }
+
+    private async Task CloseAllPopups() => await ModalService.HideAllModalsAsync();
+
+    public void Dispose()
+    {
+
+    }
+
+}

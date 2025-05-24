@@ -1,0 +1,22 @@
+{
+  "configProperties": {
+    "System.Globalization.Invariant": true,
+    "System.Globalization.PredefinedCulturesOnly": false,
+    "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false,
+    "System.Text.Json.JsonSerializer.IsReflectionEnabledByDefault": true,
+    "Microsoft.AspNetCore.Blazor.WebAssembly.EnableUnsafeEval": false,
+    "Microsoft.AspNetCore.Components.WebAssembly.Runtime.JSObjectInterop": true,
+    "Microsoft.JSInterop.UnsafeAccessToJavaScriptObjectReference": false
+  },
+  "wasmHostProperties": {
+    "perHostConfig": [
+      {
+        "name": "*",
+        "configProperties": {
+          "MONO_LOG_LEVEL": "error",
+          "MONO_LOG_MASK": "asm"
+        }
+      }
+    ]
+  }
+} 

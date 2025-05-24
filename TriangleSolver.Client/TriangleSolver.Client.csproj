@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    
+    <!-- Size Optimizations -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+    <DebuggerSupport>false</DebuggerSupport>
+    <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+    <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    
+    <!-- Compression and Build Optimization -->
+    <CompressionEnabled>true</CompressionEnabled>
+    <BlazorEnableCompression>true</BlazorEnableCompression>
+    <BlazorWebAssemblyPreserveCollationData>false</BlazorWebAssemblyPreserveCollationData>
+    <BlazorWebAssemblyJiterpreter>false</BlazorWebAssemblyJiterpreter>
+    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
+    
+    <!-- Remove unused features -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <UseNativeHttpHandler>true</UseNativeHttpHandler>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0-preview.4.25258.110" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0-preview.4.25258.110" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../TriangleSolver.Solver/TriangleSolver.Solver.csproj" />
+  </ItemGroup>
+
+  <!-- Trim unused assemblies and reduce app size -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="TriangleSolver.Client" />
+    <TrimmerRootAssembly Include="TriangleSolver.Solver" />
+    <LinkerRootDescriptors Include="Linker.xml" />
+  </ItemGroup>
+  
+        <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" Condition="Exists('ILLink.Descriptors.xml')" />
+  </ItemGroup>
+
+  <!-- TailwindCSS Integration -->
+  <Target Name="BuildTailwindCSS" BeforeTargets="Build">
+    <Message Text="Building TailwindCSS for development..." Importance="high" />
+    <Exec Command="npm run css:build" ContinueOnError="false" />
+  </Target>
+
+  <Target Name="BuildTailwindCSSProduction" BeforeTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+    <Message Text="Building TailwindCSS for production..." Importance="high" />
+    <Exec Command="npm run css:prod" ContinueOnError="false" />
+  </Target>
+
+  <!-- Ensure node_modules exists before building CSS -->
+  <Target Name="EnsureNodeModules" BeforeTargets="BuildTailwindCSS;BuildTailwindCSSProduction">
+    <Exec Command="npm install" Condition="!Exists('node_modules')" ContinueOnError="false" />
+  </Target>
+
+</Project>

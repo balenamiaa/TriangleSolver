@@ -1,0 +1,108 @@
+@using TriangleSolver.Client.Services
+@inject IThemeService ThemeService
+@implements IDisposable
+
+<div class="theme-toggle-container">
+    <button @onclick="ToggleTheme"
+        class="theme-toggle-button group relative overflow-hidden rounded-xl p-2 transition-all duration-300 ease-in-out hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
+        style="background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary)); border: 1px solid var(--border-primary); box-shadow: var(--shadow-md); focus-ring-color: var(--accent-primary);">
+
+        <!-- Background Glow Effect -->
+        <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style="background: radial-gradient(circle at center, var(--accent-primary)20, transparent 70%);"></div>
+
+        <!-- Content Container -->
+        <div class="relative flex items-center space-x-3 px-2 py-1">
+            <!-- Icon Container -->
+            <div class="relative w-6 h-6 flex items-center justify-center">
+                <!-- Sun Icon -->
+                <div
+                    class="absolute inset-0 transition-all duration-500 transform @(ThemeService.CurrentTheme == "light" ? "rotate-0 opacity-100 scale-100" : "rotate-180 opacity-0 scale-75")">
+                    <svg class="w-6 h-6" style="color: var(--warning-accent);" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+                    </svg>
+                </div>
+
+                <!-- Moon Icon -->
+                <div
+                    class="absolute inset-0 transition-all duration-500 transform @(ThemeService.CurrentTheme == "dark" ? "rotate-0 opacity-100 scale-100" : "-rotate-180 opacity-0 scale-75")">
+                    <svg class="w-6 h-6" style="color: var(--accent-primary);" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Text Label -->
+            <div class="flex flex-col items-start">
+                <span class="text-xs font-medium transition-colors duration-300" style="color: var(--text-secondary);">
+                    Theme
+                </span>
+                <span class="text-sm font-semibold transition-colors duration-300" style="color: var(--text-primary);">
+                    @(ThemeService.CurrentTheme == "dark" ? "Dark" : "Light")
+                </span>
+            </div>
+
+        </div>
+
+        <!-- Ripple Effect -->
+        <div class="absolute inset-0 rounded-xl overflow-hidden">
+            <div class="ripple absolute inset-0 rounded-xl opacity-0 group-active:opacity-30 transition-opacity duration-200"
+                style="background: radial-gradient(circle, var(--accent-primary) 0%, transparent 70%);"></div>
+        </div>
+    </button>
+</div>
+
+<style>
+    .theme-toggle-button:hover {
+        box-shadow: var(--shadow-lg), 0 0 20px var(--accent-primary)40;
+    }
+
+    .theme-toggle-button:active {
+        transform: scale(0.98);
+    }
+
+    .theme-toggle-button:focus {
+        box-shadow: var(--shadow-xl), 0 0 0 3px var(--accent-primary)50;
+    }
+
+    @@keyframes pulse-glow {
+
+        0%,
+        100% {
+            box-shadow: var(--neon-glow);
+        }
+
+        50% {
+            box-shadow: var(--neon-glow-intense);
+        }
+    }
+
+    .theme-toggle-button:hover .w-3 {
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        ThemeService.ThemeChanged += OnThemeChanged;
+        await ThemeService.InitializeAsync();
+    }
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleThemeAsync();
+    }
+
+    private void OnThemeChanged(string newTheme)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

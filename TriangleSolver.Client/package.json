@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.7",
+    "tailwindcss": "^4.1.7"
+  },
+  "scripts": {
+    "css:dev": "tailwindcss -i ./wwwroot/css/app.input.css -o ./wwwroot/css/app.output.css --watch",
+    "css:build": "tailwindcss -i ./wwwroot/css/app.input.css -o ./wwwroot/css/app.output.css --minify",
+    "css:prod": "tailwindcss -i ./wwwroot/css/app.input.css -o ./wwwroot/css/app.output.css --minify --purge"
+  }
+}
